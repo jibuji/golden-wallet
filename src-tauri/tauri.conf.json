@@ -1,0 +1,190 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/schema.json",
+  "build": {
+    "beforeBuildCommand": "npm run build",
+    "beforeDevCommand": "npm run dev",
+    "devPath": "http://localhost:5173",
+    "distDir": "../build"
+  },
+  "package": {
+    "productName": "golden-wallet",
+    "version": "0.1.0"
+  },
+  "tauri": {
+    "allowlist": {
+      "os": {
+        "all": true
+      },
+      "shell": {
+        "all": true,
+        "sidecar": true,
+        "scope": [
+          {
+            "name": "tasklist",
+            "cmd": "tasklist",
+            "args": [
+              {
+                "validator": "/FI"
+              },
+              {
+                "validator": "PID\\s+eq\\s+\\d+"
+              }
+            ]
+          },
+          {
+            "name": "ps",
+            "cmd": "ps",
+            "args": [
+              {
+                "validator": "-p"
+              },
+              {
+                "validator": ".*"
+              }
+            ]
+          },
+          {
+            "name": "kill",
+            "cmd": "kill",
+            "args": [
+              {
+                "validator": "-9"
+              },
+              {
+                "validator": ".*"
+              }
+            ]
+          },
+          {
+            "name": "taskkill",
+            "cmd": "taskkill",
+            "args": [
+              {
+                "validator": "/F"
+              },
+              {
+                "validator": "/PID"
+              },
+              {
+                "validator": "\\d+"
+              }
+            ]
+          },
+          {
+            "name": "sidecar/minerd",
+            "sidecar": true,
+            "args": [
+              {
+                "validator": "--url=\\S+"
+              },
+              {
+                "validator": "--coinbase-sig=\\S+"
+              },
+              {
+                "validator": "--coinbase-addr=\\S+"
+              },
+              {
+                "validator": "--threads=\\S+"
+              }
+            ]
+          },
+          {
+            "name": "sidecar/bitbid",
+            "sidecar": true,
+            "args": [
+              {
+                "validator": "-rpcuser=\\S+"
+              },
+              {
+                "validator": "-rpcpassword=\\S+"
+              },
+              {
+                "validator": "-datadir=\\S+"
+              }
+            ]
+          }
+        ]
+      },
+      "http": {
+        "scope": [
+          "http://*",
+          "https://*"
+        ],
+        "all": true,
+        "request": true
+      },
+      "fs": {
+        "all": true,
+        "readFile": true,
+        "writeFile": true,
+        "readDir": true,
+        "copyFile": true,
+        "createDir": true,
+        "removeDir": true,
+        "removeFile": true,
+        "renameFile": true,
+        "exists": true,
+        "scope": [
+          "$APPDATA/**/**",
+          "$RESOURCE/*"
+        ]
+      },
+      "path": {
+        "all": true
+      }
+    },
+    "windows": [
+      {
+        "fullscreen": false,
+        "height": 800,
+        "resizable": true,
+        "title": "golden-wallet",
+        "width": 1200
+      }
+    ],
+    "security": {
+      "csp": "default-src blob: data: filesystem: ws: http: https: 'unsafe-eval' 'unsafe-inline'; connect-src http://localhost:9800"
+    },
+    "bundle": {
+      "active": true,
+      "targets": "all",
+      "identifier": "bitbi-golden-wallet",
+      "category": "DeveloperTool",
+      "copyright": "",
+      "deb": {
+        "depends": []
+      },
+      "externalBin": [
+        "sidecar/minerd",
+        "sidecar/bitbid"
+      ],
+      "icon": [
+        "icons/32x32.png",
+        "icons/128x128.png",
+        "icons/128x128@2x.png",
+        "icons/icon.icns",
+        "icons/icon.ico"
+      ],
+      "longDescription": "",
+      "macOS": {
+        "entitlements": null,
+        "exceptionDomain": "",
+        "frameworks": [],
+        "providerShortName": null,
+        "signingIdentity": null
+      },
+      "resources": [
+        "resources/*"
+      ],
+      "shortDescription": "",
+      "windows": {
+        "certificateThumbprint": null,
+        "digestAlgorithm": "sha256",
+        "timestampUrl": ""
+      }
+    },
+    "updater": {
+      "active": false
+    }
+  }
+}

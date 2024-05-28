@@ -1,0 +1,453 @@
+import { fetch, Body } from '@tauri-apps/api/http';
+type RpcClientOptions = {
+    host?: string;
+    port?: number;
+    user?: string;
+    pass?: string;
+    protocol?: string;
+    disableAgent?: boolean;
+    rejectUnauthorized?: boolean;
+};
+
+type Logger = {
+    info: Function;
+    warn: Function;
+    err: Function;
+    debug: Function;
+};
+
+const CALL_SPEC = {
+    abandonTransaction: 'str',
+    abortRescan: '',
+    addMultiSigAddress: '',
+    addNode: '',
+    analyzePSBT: 'str',
+    backupWallet: '',
+    bumpFee: 'str',
+    clearBanned: '',
+    combinePSBT: 'obj',
+    combineRawTransaction: 'obj',
+    convertToPSBT: 'str',
+    createMultiSig: '',
+    createPSBT: 'obj',
+    createRawTransaction: 'obj obj',
+    //createWallet: 'str',
+    decodePSBT: 'str',
+    decodeScript: 'str',
+    decodeRawTransaction: '',
+    deriveAddresses: 'str',
+    disconnectNode: '',
+    dumpPrivKey: '',
+    dumpWallet: 'str',
+    encryptWallet: '',
+    enumerateSigners: '',
+    estimateFee: '', // deprecated
+    estimateSmartFee: 'int str',
+    estimatePriority: 'int', // deprecated
+    generate: 'int', // deprecated
+    generateBlock: 'str obj',
+    generateToAddress: 'int str',
+    generateToDescriptor: 'int str',
+    getAccount: '', // deprecated
+    getAccountAddress: 'str', // deprecated
+    getAddedNodeInfo: '',
+    getAddressMempool: 'obj', // deprecated
+    getAddressUtxos: 'obj', // deprecated
+    getAddressBalance: 'obj', // deprecated
+    getAddressDeltas: 'obj', // deprecated
+    // getAddressesByLabel: 'str',
+    getAddressInfo: 'str',
+    getAddressTxids: 'obj', // deprecated
+    getAddressesByAccount: '', // deprecated
+    getBalance: 'str int',
+    getBalances: '',
+    getBestBlockHash: '',
+    getBlockDeltas: 'str', // deprecated
+    getBlock: 'str int',
+    // getBlockchainInfo: '',
+    getBlockCount: '',
+    getBlockFilter: 'str',
+    getBlockHashes: 'int int obj', // deprecated
+    getBlockHash: 'int',
+    getBlockHeader: 'str',
+    getBlockNumber: '', // deprecated
+    getBlockStats: 'str',
+    getBlockTemplate: '',
+    getConnectionCount: '',
+    getChainTips: '',
+    getChainTxStats: '',
+    getDescriptorInfo: 'str',
+    getDifficulty: '',
+    getGenerate: '', // deprecated
+    getHashesPerSec: '', // deprecated
+    getIndexInfo: '',
+    getInfo: '', // deprecated
+    getMemoryInfo: '',
+    getMemoryPool: '', // deprecated
+    getMemPoolAncestors: 'str',
+    getMemPoolDescendants: 'str',
+    getMemPoolEntry: 'str',
+    getMemPoolInfo: '',
+    getMiningInfo: '',
+    getNetTotals: '',
+    getNetworkHashPS: '',
+    getNetworkInfo: '',
+    // getNewAddress: 'str str',
+    getNodeAddresses: '',
+    getPeerInfo: '',
+    getRawChangeAddress: '',
+    getRawMemPool: 'bool',
+    getRawTransaction: 'str int',
+    getReceivedByAccount: 'str int', // deprecated
+    getReceivedByAddress: 'str int',
+    getReceivedByLabel: 'str',
+    getRpcInfo: '',
+    getSpentInfo: 'obj',
+    getTransaction: '',
+    getTxOut: 'str int bool',
+    getTxOutProof: '',
+    getTxOutSetInfo: '',
+    getUnconfirmedBalance: '',
+    // getWalletInfo: '',
+    getWork: '',
+    getZmqNotifications: '',
+    finalizePSBT: 'str',
+    fundRawTransaction: 'str',
+    help: '',
+    importAddress: 'str str bool',
+    importDescriptors: 'str',
+    importMulti: 'obj obj',
+    importPrivKey: 'str str bool',
+    importPrunedFunds: 'str, str',
+    importPubKey: 'str',
+    importWallet: 'str',
+    invalidateBlock: 'str',
+    joinPSBTs: 'obj',
+    keyPoolRefill: '',
+    listAccounts: 'int',
+    listAddressGroupings: '',
+    listBanned: '',
+    listDescriptors: '',
+    listLabels: '',
+    listLockUnspent: 'bool',
+    listReceivedByAccount: 'int bool',
+    listReceivedByAddress: 'int bool',
+    listReceivedByLabel: '',
+    listSinceBlock: 'str int',
+    listTransactions: 'str int int',
+    listUnspent: 'int int',
+    listWalletDir: '',
+    listWallets: '',
+    // loadWallet: 'str',
+    lockUnspent: '',
+    logging: '',
+    move: 'str str float int str',
+    ping: '',
+    preciousBlock: 'str',
+    prioritiseTransaction: 'str float int',
+    pruneBlockChain: 'int',
+    psbtBumpFee: 'str',
+    removePrunedFunds: 'str',
+    reScanBlockChain: '',
+    saveMemPool: '',
+    send: 'obj',
+    setHDSeed: '',
+    setLabel: 'str str',
+    setWalletFlag: 'str',
+    scanTxOutSet: 'str',
+    sendFrom: 'str str float int str str',
+    sendMany: 'str obj int str',  //not sure this is will work
+    sendRawTransaction: 'str',
+    sendToAddress: 'str float str str',
+    setAccount: '',
+    setBan: 'str str',
+    setNetworkActive: 'bool',
+    setGenerate: 'bool int',
+    setTxFee: 'float',
+    signMessage: '',
+    signMessageWithPrivKey: 'str str',
+    signRawTransaction: '',
+    signRawTransactionWithKey: 'str obj',
+    signRawTransactionWithWallet: 'str',
+    stop: '',
+    submitBlock: 'str',
+    submitHeader: 'str',
+    testMemPoolAccept: 'obj',
+    unloadWallet: '',
+    upgradeWallet: '',
+    uptime: '',
+    utxoUpdatePSBT: 'str',
+    validateAddress: '',
+    verifyChain: '',
+    verifyMessage: '',
+    verifyTxOutProof: 'str',
+    walletCreateFundedPSBT: '',
+    walletDisplayAddress: 'str',
+    walletLock: '',
+    walletPassPhrase: 'string int',
+    walletPassphraseChange: '',
+    walletProcessPSBT: 'str'
+};
+
+function slice(arr: any[], start: number, end: number): any[] {
+    return Array.prototype.slice.call(arr, start, end);
+}
+
+class RpcClient {
+    static loggers: { [key: string]: Logger } = {
+        none: { info: () => { }, warn: () => { }, err: () => { }, debug: () => { } },
+        normal: { info: console.log, warn: console.log, err: console.log, debug: () => { } },
+        debug: { info: console.log, warn: console.log, err: console.log, debug: console.log },
+    };
+
+    static config = {
+        logger: 'normal', // none, normal, debug
+    };
+
+    host: string;
+    port: number;
+    user: string;
+    pass: string;
+    protocol: string;
+    batchedCalls: any;
+    disableAgent: boolean;
+    rejectUnauthorized: boolean;
+    log: Logger;
+    httpOptions: any;
+
+    constructor(opts: RpcClientOptions | string) {
+        if (typeof opts === 'string') {
+            opts = decodeURL(opts);
+        }
+        opts = opts || {};
+        this.host = opts.host || '127.0.0.1';
+        this.port = opts.port || 8332;
+        this.user = opts.user || 'user';
+        this.pass = opts.pass || 'pass';
+        this.protocol = opts.protocol === 'http' ? 'http' : 'https';
+        this.batchedCalls = null;
+        this.disableAgent = opts.disableAgent || false;
+
+        this.rejectUnauthorized = !!opts.rejectUnauthorized
+
+
+        this.log = RpcClient.loggers[RpcClient.config.logger || 'normal'];
+    }
+
+    async rpc(request: any): Promise<any> {
+        const userInfo = `${this.user}:${this.pass}`;
+        const auth = btoa(userInfo);
+        console.log(`rpc request`, userInfo);
+        console.log(`rpc request`, request);
+        const options = {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Basic ${auth}`
+            },
+            body: Body.json(request),
+        };
+
+        const url = `${this.protocol}://${this.host}:${this.port}/`;
+        // [Log] rpc fetch options – {method: "POST", headers: {Content-Type: "application/json", Authorization: "Basic Z29sZGVuOndhbGxldA=="}, body: "{\"method\":\"getblockchaininfo\",\"params\":[],\"id\":46363}"} (index.ts, line 252)
+        try {
+            console.log(`rpc fetch url`, url);
+            console.log(`rpc fetch options`, options)
+            const response = await fetch(url, {
+                method: 'POST', 
+                headers: {'Content-Type': 'application/json', 'Authorization': `Basic ${auth}`},
+                body: Body.json(request),
+            });
+            console.log(`rpc fetch response`, response)
+            const data = response.data;
+            console.log(`rpc fetch response.data`, data)
+
+            if (response.status === 401) {
+                throw new Error('Bitcoin JSON-RPC: Connection Rejected: 401 Unnauthorized');
+            }
+            if (response.status === 403) {
+                throw new Error('Bitcoin JSON-RPC: Connection Rejected: 403 Forbidden');
+            }
+            if (response.status === 500 && data === 'Work queue depth exceeded') {
+                const exceededError = new Error('Bitcoin JSON-RPC: ' + data);
+                exceededError['code'] = 429; // Too many requests
+                throw exceededError;
+            }
+            if (response.status === 500 && data.error) {
+                const err = new Error(data.error.message);
+                err['code'] = data.error.code;
+                throw err;
+            }
+
+            return data.result;
+        } catch (error: any) {
+            this.log.info(error);
+            this.log.err(error.stack);
+            this.log.err('HTTP Status code:' + error.status);
+            throw new Error('Bitcoin JSON-RPC: Request Error: ' + error.message);
+        }
+    }
+
+    async getNewAddress(label?: string, address_type?: string) {
+        const params:string[] = [];
+        if (label) {
+            params.push(label);
+        }
+        if (address_type) {
+            params.push(address_type);
+        }
+        return await this.rpc({
+            method: 'getnewaddress',
+            params: [label, address_type],
+            id: getRandomId()
+        });
+    }
+
+    async getAddressesByLabel(label: string) {
+        try {
+            const addrs = await this.rpc({
+                method: 'getaddressesbylabel',
+                params: [label],
+                id: getRandomId()
+            });
+            if (!addrs) {
+                return null;
+            }
+            return Object.keys(addrs);
+        } catch (e) {
+            console.log("getAddressesByLabel error:", e.code, "=", e.message);
+            return null;
+        }
+    }
+
+    async loadWallet(name: string) {
+        try {
+            await this.rpc({
+                method: 'loadwallet',
+                params: [name],
+                id: getRandomId()
+             });
+            return true;
+        } catch (e) {
+            console.log("loadWallet error:", e.code, "=", e.message)
+            if (e.message.includes("already loaded")) {
+                //This same wallet is already loaded
+                console.log("already-loaded true");
+                return true;
+            }
+            throw e;
+        }
+    }
+
+    async createWallet(name: string) {
+        return await this.rpc({
+            method: 'createwallet',
+            params: [name],
+            id: getRandomId()
+        });
+    }
+
+    async getWalletInfo() {
+        return await this.rpc({
+            method: 'getwalletinfo',
+            params: [],
+            id: getRandomId()
+        });
+    }
+
+    async getBlockchainInfo() {
+        return await this.rpc({
+            method: 'getblockchaininfo',
+            params: [],
+            id: getRandomId()
+        });
+    }
+
+    // ... rest of the methods
+}
+
+function decodeURL(str: string) {
+    let parsedUrl = new URL(str);
+    let hostname = parsedUrl.hostname;
+    let port = parseInt(parsedUrl.port, 10);
+    let protocol = parsedUrl.protocol;
+    // strip trailing ":"
+    protocol = protocol.substring(0, protocol.length - 1);
+    let user = parsedUrl.username;
+    let pass = parsedUrl.password;
+    let opts = {
+        host: hostname,
+        port: port,
+        protocol: protocol,
+        user: user,
+        pass: pass,
+    };
+    return opts;
+}
+type ArgMap = (arg: any) => any;
+type ApiCalls = { [key: string]: string };
+type RpcCall = (options: any, callback: Function) => void;
+
+function generateRPCMethods(constructor: any, apiCalls: ApiCalls) {
+
+    function createRPCMethod(methodName: string, argMap: ArgMap[]): Function {
+        return async function (...args: any[]) {
+
+            let limit = args.length - 1;
+
+
+            for (let i = 0; i < limit; i++) {
+                if (argMap[i]) {
+                    args[i] = argMap[i](args[i]);
+                }
+            }
+
+            return await this.rpc( {
+                method: methodName,
+                params: args.slice(0, args.length - 1),
+                id: getRandomId()
+            }, args[args.length - 1]);
+
+        };
+    };
+
+    const types: { [key: string]: ArgMap } = {
+        str: function (arg: any) {
+            return arg.toString();
+        },
+        int: function (arg: any) {
+            return parseFloat(arg);
+        },
+        float: function (arg: any) {
+            return parseFloat(arg);
+        },
+        bool: function (arg: any) {
+            return (arg === true || arg == '1' || arg == 'true' || arg.toString().toLowerCase() == 'true');
+        },
+        obj: function (arg: any) {
+            if (typeof arg === 'string') {
+                return JSON.parse(arg);
+            }
+            return arg;
+        }
+    };
+
+    for (let k in apiCalls) {
+        let spec: ArgMap[] = [];
+        if (apiCalls[k].length) {
+            spec = apiCalls[k].split(' ').map(s => types[s] || types.str);
+        }
+        const methodName = k.toLowerCase();
+        constructor.prototype[k] = createRPCMethod(methodName, spec);
+        constructor.prototype[methodName] = constructor.prototype[k];
+    }
+
+}
+
+function getRandomId(): number {
+    return parseInt((Math.random() * 100000).toString(), 10);
+}
+
+generateRPCMethods(RpcClient, CALL_SPEC);
+
+export default RpcClient;
