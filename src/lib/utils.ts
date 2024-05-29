@@ -8,49 +8,56 @@ import { getDefaultMinerAddr } from "./wallet-utils";
 
 
 export async function ensureBitbidIsRunning() {
-
-    const appDataDirPath = await appDataDir();
-    console.log("appDataDirPath:", appDataDirPath);
-    const nodeDataDirPath = await join(appDataDirPath, 'bitbid');
-    const pid = await getPid(`${nodeDataDirPath}/bitbid.pid`);
-    if (pid) {
-        if (await isProcessRunning(pid)) {
-            console.log('bitbid is running')
-            return;
+    try {
+        const appDataDirPath = await appDataDir();
+        console.log("appDataDirPath:", appDataDirPath);
+        const nodeDataDirPath = await join(appDataDirPath, 'bitbid');
+        const pid = await getPid(`${nodeDataDirPath}/bitbid.pid`);
+        if (pid) {
+            if (await isProcessRunning(pid)) {
+                console.log('bitbid is running')
+                return;
+            }
         }
+        const child = await runBitbi(nodeDataDirPath);
+        //write pid into bitbid.pid
+        await fs.writeFile(`${nodeDataDirPath}/bitbid.pid`, child.pid.toString());
+        return;
+    } catch (e) {
+        console.log("ensureBitbidIsRunning error:", e);
     }
-    const child = await runBitbi(nodeDataDirPath);
-    //write pid into bitbid.pid
-    await fs.writeFile(`${nodeDataDirPath}/bitbid.pid`, child.pid.toString());
-    return;
 }
 
 
 export async function ensureMinerdIsRunning(threads: number, addr: string) {
-    const appDataDirPath = await appDataDir();
-    console.log("appDataDirPath:", appDataDirPath);
-    const minerDir = await join(appDataDirPath, 'minerd');
-    const pid = await getPid(`${minerDir}/minerd.pid`);
-    if (pid) {
-        if (await isProcessRunning(pid)) {
-            console.log('minerd is running')
-            return;
+    try {
+        const appDataDirPath = await appDataDir();
+        console.log("appDataDirPath:", appDataDirPath);
+        const minerDir = await join(appDataDirPath, 'minerd');
+        const pid = await getPid(`${minerDir}/minerd.pid`);
+        if (pid) {
+            if (await isProcessRunning(pid)) {
+                console.log('minerd is running')
+                return;
+            }
         }
+        const child = await runMinerd(minerDir, threads, addr);
+        //write pid into minerd.pid
+        await fs.writeFile(`${minerDir}/minerd.pid`, child.pid.toString());
+        return;
+    } catch (e) {
+        console.log("ensureMinerdIsRunning error:", e);
     }
-    const child = await runMinerd(minerDir, threads, addr);
-    //write pid into minerd.pid
-    await fs.writeFile(`${minerDir}/minerd.pid`, child.pid.toString());
-    return;
 }
 
 async function killPid(pid: number) {
     const isWindows = (await platform()) === 'win32';
     if (isWindows) {
         //kill windows process
-        const command = new Command("taskkill", ['/F', '/PID', pid.toString()]);
+        const command = new Command("taskkill", ['/F', '/PID', pid.toString()], { encoding: "utf-8" });
         await command.execute();
     } else {
-        const command = new Command("kill", ['-9', pid.toString()]);
+        const command = new Command("kill", ['-9', pid.toString()], { encoding: "utf-8" });
         await command.execute();
     }
 }
@@ -106,13 +113,15 @@ export async function isSidecarRunning(name: string) {
 }
 
 async function runBitbi(nodeDataDirPath: string) {
+    console.log("runBitbi 1...")
     await fs.createDir(`${nodeDataDirPath}/data`, { recursive: true });
+    console.log("runBitbi created folder:", `${nodeDataDirPath}/data`);
     const command = Command.sidecar("sidecar/bitbid", [
         '-rpcuser=golden',
         `-rpcpassword=wallet`,
         `-datadir=${nodeDataDirPath}/data`,
-    ]);
-
+    ], { encoding: "utf-8" });
+    console.log("runBitbi begin spawn command");
     return await command.spawn();
 }
 
@@ -131,7 +140,7 @@ async function runMinerd(minerDir: string, threads: number, addr: string) {
         `--coinbase-sig=golden-${shortenNumbers(now)}`,
         `--coinbase-addr=${addr}`,
         `--threads=${threads}`,
-    ], { env: { "PATH": "%PATH%;.\\resources" } });
+    ], { env: { "PATH": "%PATH%;.\\resources" }, encoding: "utf-8"  });
     const miner = await command.spawn();
     command.stdout.on('data', data => {
         console.log('stdout:', data);
@@ -165,7 +174,7 @@ async function isProcessRunning(pid: number) {
     const command = isWindows ? ["tasklist", "/FI", `PID eq ${pid}`] : ['ps', '-p', `${pid}`];
 
     //exec command
-    const output = await new Command(command[0], command.slice(1)).execute();
+    const output = await new Command(command[0], command.slice(1), {encoding:"utf-8"}).execute();
     console.log('isProcessRunning output:', output.stdout, output.stderr);
     return output.stdout.includes(pid.toString());
 }
