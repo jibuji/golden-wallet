@@ -1,5 +1,7 @@
 import Client from "./bitbi-rpc/index";
 
+export const MinerDefaultWallet = "default";
+
 const gCli = new Client({
     protocol: "http",
     host: "localhost",
@@ -15,9 +17,11 @@ export async function listWallets() {
 }
 
 export async function loadWallet(name: string) {
-
     return await gCli.loadWallet(name);
-    
+}
+
+export async function backupWallet(name: string, path: string) {
+    return await gCli.backupWallet(name, path);
 }
 
 export async function ensureLoadWallet(name: string) {
@@ -39,17 +43,37 @@ export async function ensureLoadWallet(name: string) {
 
 export async function getDefaultMinerAddr() {
     try {
-        await ensureLoadWallet("default");
-        let addrs = await gCli.getAddressesByLabel('miner');
+        await ensureLoadWallet(MinerDefaultWallet);
+        let addrs = await gCli.getAddressesByLabel(MinerDefaultWallet, 'miner');
         console.log("address:", addrs);
         if (!addrs) {
-            const newaddr = await gCli.getNewAddress('miner');
+            const newaddr = await gCli.getNewAddress(MinerDefaultWallet, 'miner');
             console.log("new address:", newaddr);
             addrs = [newaddr];
         }
         return addrs[0];
     } catch (e) {
         console.error('getDefaultMinerAddr', e)
+    }
+}
+
+export async function getMinerAddresses(n: number) {
+    try {
+        await ensureLoadWallet(MinerDefaultWallet);
+        let addrs = await gCli.getAddressesByLabel(MinerDefaultWallet, 'miner');
+        console.log("address:", addrs);
+        if (!addrs) {
+            addrs = []
+        }
+        while (addrs.length < n) {
+            const newaddr = await gCli.getNewAddress(MinerDefaultWallet, 'miner');
+            console.log("new address:", newaddr);
+            addrs.push(newaddr);
+        }
+        return addrs;
+    } catch (e) {
+        console.error('getMinerAddresses', e)
+        return [];
     }
 }
 
@@ -64,7 +88,7 @@ export interface IWalletInfo {
     height: number
 } 
 export async function getMinerWalletInfo(): Promise<IWalletInfo> {
-    const info = await gCli.getWalletInfo();
+    const info = await gCli.getWalletInfo(MinerDefaultWallet);
     console.log("wallet info:", info);
     if (!info) {
         return info;

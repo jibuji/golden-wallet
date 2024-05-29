@@ -7,38 +7,40 @@ import { platform } from '@tauri-apps/api/os';
 import { getDefaultMinerAddr } from "./wallet-utils";
 
 
-export async function ensureSidecarIsRunning(name: string, threads: number) {
+export async function ensureBitbidIsRunning() {
 
     const appDataDirPath = await appDataDir();
     console.log("appDataDirPath:", appDataDirPath);
-    if (name === "bitbid") {
-        const nodeDataDirPath = await join(appDataDirPath, 'bitbid');
-        const pid = await getPid(`${nodeDataDirPath}/bitbid.pid`);
-        if (pid) {
-            if (await isProcessRunning(pid)) {
-                console.log('bitbid is running')
-                return;
-            }
+    const nodeDataDirPath = await join(appDataDirPath, 'bitbid');
+    const pid = await getPid(`${nodeDataDirPath}/bitbid.pid`);
+    if (pid) {
+        if (await isProcessRunning(pid)) {
+            console.log('bitbid is running')
+            return;
         }
-        const child = await runBitbi(nodeDataDirPath);
-        //write pid into bitbid.pid
-        await fs.writeFile(`${nodeDataDirPath}/bitbid.pid`, child.pid.toString());
-        return;
     }
-    if (name === 'minerd') {
-        const minerDir = await join(appDataDirPath, 'minerd');
-        const pid = await getPid(`${minerDir}/minerd.pid`);
-        if (pid) {
-            if (await isProcessRunning(pid)) {
-                console.log('minerd is running')
-                return;
-            }
+    const child = await runBitbi(nodeDataDirPath);
+    //write pid into bitbid.pid
+    await fs.writeFile(`${nodeDataDirPath}/bitbid.pid`, child.pid.toString());
+    return;
+}
+
+
+export async function ensureMinerdIsRunning(name: string, threads: number, addr: string) {
+    const appDataDirPath = await appDataDir();
+    console.log("appDataDirPath:", appDataDirPath);
+    const minerDir = await join(appDataDirPath, 'minerd');
+    const pid = await getPid(`${minerDir}/minerd.pid`);
+    if (pid) {
+        if (await isProcessRunning(pid)) {
+            console.log('minerd is running')
+            return;
         }
-        const child = await runMinerd(minerDir, threads);
-        //write pid into minerd.pid
-        await fs.writeFile(`${minerDir}/minerd.pid`, child.pid.toString());
-        return;
     }
+    const child = await runMinerd(minerDir, threads, addr);
+    //write pid into minerd.pid
+    await fs.writeFile(`${minerDir}/minerd.pid`, child.pid.toString());
+    return;
 }
 
 async function killPid(pid: number) {
@@ -113,10 +115,10 @@ async function runBitbi(nodeDataDirPath: string) {
     return await command.spawn();
 }
 
-async function runMinerd(minerDir: string, threads: number) {
+async function runMinerd(minerDir: string, threads: number, addr: string) {
     await fs.createDir(minerDir, { recursive: true });
-    const minerAddr = await getDefaultMinerAddr();
-    if (!minerAddr) {
+    // const addr = await getDefaultMinerAddr();
+    if (!addr) {
         console.error('miner address not found');
         throw new Error('miner address not found');
     }
@@ -125,8 +127,8 @@ async function runMinerd(minerDir: string, threads: number) {
     const now = Date.now();
     const command = Command.sidecar("sidecar/minerd", [
         '--url=http://golden:wallet@127.0.0.1:9800',
-        `--coinbase-sig=bitbi-golden-wallet-${shortenNumbers(now)}`,
-        `--coinbase-addr=${minerAddr}`,
+        `--coinbase-sig=golden-${shortenNumbers(now)}`,
+        `--coinbase-addr=${addr}`,
         `--threads=${threads}`,
     ], { env: { "PATH": "%PATH%;.\\resources" } });
     const miner = await command.spawn();

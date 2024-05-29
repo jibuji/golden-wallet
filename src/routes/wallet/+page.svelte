@@ -83,7 +83,7 @@
 	.container {
 		display: flex;
 		flex-direction: column;
-		padding: 20px;
+		padding: 10px;
 		font-family: Arial, sans-serif;
 		color: #333;
 	}

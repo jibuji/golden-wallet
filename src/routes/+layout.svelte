@@ -1,34 +1,52 @@
 <script lang="ts">
-	import { ensureSidecarIsRunning, sleep } from '$lib/utils';
-	import { getBlockchainInfo, getDefaultMinerAddr, listWallets } from '$lib/wallet-utils';
+	import { ensureBitbidIsRunning, sleep } from '$lib/utils';
+	import { MinerDefaultWallet, backupWallet, getBlockchainInfo, getDefaultMinerAddr, listWallets } from '$lib/wallet-utils';
 	import { onMount } from 'svelte';
+	import { save } from '@tauri-apps/api/dialog';
 
 	let miner_enabled = false;
 
 	import type { LayoutData } from './$types';
+	import { toast } from '$lib/toast';
 
 	export let data: LayoutData;
 
 	//log onMount event
-	onMount(() => {
-		console.log('onMount event');
-		return () => console.log('onDestroy event');
-	});
-	// onMount(() => {
-	//     let cancel = false;
-	//     async function runEvery10Seconds() {
-	//         // fetch data from the server
-	//         for (;!cancel;) {
-	//           const addr = await getDefaultMinerAddr();
-	//           miner_enabled = !!addr;
-	//           await ensureSidecarIsRunning("bitbid");
-	//           await sleep(10000);
-	//         }
-	//     }
 
-	//     runEvery10Seconds();
-	//     return () => (cancel = true);
-	// });
+	onMount(() => {
+		let cancel = false;
+		async function runEvery10Seconds() {
+			// fetch data from the server
+			for (; !cancel; ) {
+				const addr = await getDefaultMinerAddr();
+				miner_enabled = !!addr;
+				await ensureBitbidIsRunning();
+				await sleep(10000);
+			}
+		}
+
+		runEvery10Seconds();
+		return () => (cancel = true);
+	});
+	async function backupWalletDialog() {
+		// Add your backup wallet logic here
+		console.log('Backup Wallet clicked');
+		const filePath = await save({
+			filters: [
+				{
+					name: 'Wallet',
+					extensions: ['dat']
+				}
+			]
+		});
+		console.log('filePath:', filePath);
+		if (!filePath) {
+			console.log('No file path selected, cancelled');
+			return;
+		}
+		await backupWallet(MinerDefaultWallet, filePath);
+		toast('Wallet backed up successfully');
+	}
 </script>
 
 <main>
@@ -52,20 +70,22 @@
 				<li>
 					<a href="#">File</a>
 					<ul>
-						<li><a href="#">Submenu 1</a></li>
-						<li><a href="#">Submenu 2</a></li>
+						<li><a href="#" on:click|preventDefault={backupWalletDialog}>Backup Wallet...</a></li>
+						<!-- <li><a href="#">Submenu 2</a></li> -->
 					</ul>
 				</li>
-				<li>
+				<!-- <li>
 					<a href="#">about</a>
 					<ul>
 						<li><a href="#">Submenu 1</a></li>
 						<li><a href="#">Submenu 2</a></li>
 					</ul>
-				</li>
+				</li> -->
 			</ul>
 		</div>
-		<slot></slot>
+		<div class="content">
+			<slot></slot>
+		</div>
 	</section>
 </main>
 
@@ -121,10 +141,15 @@
 
 	.main-content {
 		flex: 1;
-		padding-left: 20px;
-		padding-right: 20px;
+		padding: 0 4px;
 		background-color: #f1f1f1;
 	}
+
+	.content {
+		padding-left: 10px;
+		padding-right: 10px;
+	}
+	
 	.menu-bar ul {
 		list-style-type: none;
 		padding: 0;
@@ -133,6 +158,7 @@
 		background-color: #f8f9fa;
 		border-radius: 5px;
 		box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+		margin-block-start: 4px;
 	}
 
 	.menu-bar li {

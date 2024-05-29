@@ -12,6 +12,13 @@
   },
   "tauri": {
     "allowlist": {
+      "notification": {
+        "all": true 
+      },
+      "dialog": {
+        "open": true, 
+        "save": true 
+      },
       "os": {
         "all": true
       },

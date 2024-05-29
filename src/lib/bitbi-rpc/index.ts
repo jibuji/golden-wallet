@@ -22,7 +22,7 @@ const CALL_SPEC = {
     addMultiSigAddress: '',
     addNode: '',
     analyzePSBT: 'str',
-    backupWallet: '',
+    // backupWallet: '',
     bumpFee: 'str',
     clearBanned: '',
     combinePSBT: 'obj',
@@ -234,7 +234,7 @@ class RpcClient {
         this.log = RpcClient.loggers[RpcClient.config.logger || 'normal'];
     }
 
-    async rpc(request: any): Promise<any> {
+    async rpc(request: any, path=""): Promise<any> {
         const userInfo = `${this.user}:${this.pass}`;
         const auth = btoa(userInfo);
         console.log(`rpc request`, userInfo);
@@ -248,7 +248,7 @@ class RpcClient {
             body: Body.json(request),
         };
 
-        const url = `${this.protocol}://${this.host}:${this.port}/`;
+        const url = `${this.protocol}://${this.host}:${this.port}/${path}`;
         // [Log] rpc fetch options – {method: "POST", headers: {Content-Type: "application/json", Authorization: "Basic Z29sZGVuOndhbGxldA=="}, body: "{\"method\":\"getblockchaininfo\",\"params\":[],\"id\":46363}"} (index.ts, line 252)
         try {
             console.log(`rpc fetch url`, url);
@@ -288,7 +288,7 @@ class RpcClient {
         }
     }
 
-    async getNewAddress(label?: string, address_type?: string) {
+    async getNewAddress(wallet: string, label?: string, address_type?: string) {
         const params:string[] = [];
         if (label) {
             params.push(label);
@@ -298,18 +298,18 @@ class RpcClient {
         }
         return await this.rpc({
             method: 'getnewaddress',
-            params: [label, address_type],
+            params: params,
             id: getRandomId()
-        });
+        }, `wallet/${wallet}`);
     }
 
-    async getAddressesByLabel(label: string) {
+    async getAddressesByLabel(wallet: string, label: string) {
         try {
             const addrs = await this.rpc({
                 method: 'getaddressesbylabel',
                 params: [label],
                 id: getRandomId()
-            });
+            }, `wallet/${wallet}`);
             if (!addrs) {
                 return null;
             }
@@ -339,6 +339,15 @@ class RpcClient {
         }
     }
 
+    async backupWallet(name: string, destFile: string) {
+        console.log("backupWallet", name, destFile)
+        return await this.rpc({
+            method: 'backupwallet',
+            params: [destFile],
+            id: getRandomId()
+        }, `wallet/${name}`);
+    }
+
     async createWallet(name: string) {
         return await this.rpc({
             method: 'createwallet',
@@ -347,12 +356,12 @@ class RpcClient {
         });
     }
 
-    async getWalletInfo() {
+    async getWalletInfo(wallet: string) {
         return await this.rpc({
             method: 'getwalletinfo',
             params: [],
             id: getRandomId()
-        });
+        }, `wallet/${wallet}`);
     }
 
     async getBlockchainInfo() {
