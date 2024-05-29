@@ -36,11 +36,12 @@
 </script>
 
 <div class="container">
+
 	<div class="nav-bar">
 		<a href="#">Overview</a>
 		<!-- <a href="#">Send</a>
-      <a href="#">Receive</a>
-      <a href="#">Transactions</a> -->
+		<a href="#">Receive</a>
+		<a href="#">Transactions</a> -->
 	</div>
 
 	<div class="main-content">
@@ -86,6 +87,7 @@
 		font-family: Arial, sans-serif;
 		color: #333;
 	}
+
 
 	.nav-bar {
 		display: flex;

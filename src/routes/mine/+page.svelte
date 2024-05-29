@@ -1,13 +1,16 @@
 <script lang="ts">
-	import { appDataDir } from '@tauri-apps/api/path';
-	import { Child, Command } from '@tauri-apps/api/shell';
 	import { ensureSidecarIsRunning, isSidecarRunning, sleep, stopSidecar } from '$lib/utils';
 	import { onMount } from 'svelte';
-	// alternatively, use `window.__TAURI__.shell.Command`
-	// `binaries/my-sidecar` is the EXACT value specified on `tauri.conf.json > tauri > bundle > externalBin`
+
+	let threads = 1;
+	let isRunning = false;
+	let isInputVisible = true;
+
 	onMount( () => {
 	    let cancel = false;
 		async function checkRunningLoop() {
+			const nThreads = localStorage.getItem('threads');
+			threads = nThreads && parseInt(nThreads) || 1;
 	        isRunning = await isSidecarRunning("minerd");
 	        for (;!cancel;) {
 	            await sleep(10000);
@@ -19,13 +22,12 @@
 	    return () => (cancel = true);
 	})
 
-	let isRunning = false;
-	let threads = 1;
-	let isInputVisible = true;
+
 
 	async function startMining() {
 		console.log('start mining with', threads, 'threads');
 		await ensureSidecarIsRunning('minerd', threads);
+		localStorage.setItem('threads', threads.toString());
 		isRunning = true;
 		isInputVisible = false;
 	}
@@ -68,7 +70,7 @@
 	}
 	.status-section {
 		margin-bottom: 30px;
-		padding: 10px;
+		padding: 10px 0;
 		border-radius: 5px;
 	}
 	.status {

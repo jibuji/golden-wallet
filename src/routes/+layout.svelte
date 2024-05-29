@@ -6,7 +6,7 @@
 	let miner_enabled = false;
 
 	import type { LayoutData } from './$types';
-	
+
 	export let data: LayoutData;
 
 	//log onMount event
@@ -34,19 +34,37 @@
 <main>
 	<nav class="sidebar">
 		<ul>
-			<li class={data.location === '/' ? 'active':''}>
+			<li class={data.location === '/' ? 'active' : ''}>
 				<a href="/"> Welcome </a>
 			</li>
-			<li class={data.location === '/wallet' ? 'active':''}>
+			<li class={data.location === '/wallet' ? 'active' : ''}>
 				<a href="/wallet"> Wallet </a>
 			</li>
-			<li class={data.location === '/mine' ? 'active':''}>
+			<li class={data.location === '/mine' ? 'active' : ''}>
 				<a href="/mine"> Mine </a>
 			</li>
 		</ul>
 	</nav>
 
 	<section class="main-content">
+		<div class="menu-bar">
+			<ul>
+				<li>
+					<a href="#">File</a>
+					<ul>
+						<li><a href="#">Submenu 1</a></li>
+						<li><a href="#">Submenu 2</a></li>
+					</ul>
+				</li>
+				<li>
+					<a href="#">about</a>
+					<ul>
+						<li><a href="#">Submenu 1</a></li>
+						<li><a href="#">Submenu 2</a></li>
+					</ul>
+				</li>
+			</ul>
+		</div>
 		<slot></slot>
 	</section>
 </main>
@@ -85,26 +103,82 @@
 	}
 
 	nav.sidebar ul li.active {
-    background-color: #007bff;
-    color: white;
-    padding: 10px 5px;
-    border-radius: 5px;
-    transition: background-color 0.3s ease;
-  }
+		background-color: #007bff;
+		color: white;
+		padding: 10px 5px;
+		border-radius: 5px;
+		transition: background-color 0.3s ease;
+	}
 
-  nav.sidebar ul li.active a {
-    color: white;
-    text-decoration: none;
-  }
+	nav.sidebar ul li.active a {
+		color: white;
+		text-decoration: none;
+	}
 
-  nav.sidebar ul li.active:hover {
-    background-color: #0056b3;
-  }
-  
+	nav.sidebar ul li.active:hover {
+		background-color: #0056b3;
+	}
+
 	.main-content {
 		flex: 1;
 		padding-left: 20px;
 		padding-right: 20px;
 		background-color: #f1f1f1;
+	}
+	.menu-bar ul {
+		list-style-type: none;
+		padding: 0;
+		display: flex;
+		justify-content: flex-start;
+		background-color: #f8f9fa;
+		border-radius: 5px;
+		box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+	}
+
+	.menu-bar li {
+		position: relative;
+		padding: 10px 20px;
+		cursor: pointer;
+		transition: background-color 0.3s ease;
+	}
+
+	.menu-bar li:hover {
+		background-color: #e0e0e0;
+	}
+
+	.menu-bar li ul {
+		display: none;
+		position: absolute;
+		top: 100%;
+		left: 0;
+		padding: 0;
+		list-style-type: none;
+		width: 9em;
+		box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+		border-radius: 5px;
+	}
+
+	.menu-bar li ul li {
+		padding: 10px 20px;
+		background-color: #f8f9fa;
+		transition: background-color 0.3s ease;
+	}
+
+	.menu-bar li ul li:hover {
+		background-color: #e0e0e0;
+	}
+
+	.menu-bar li:hover ul {
+		display: block;
+	}
+
+	.menu-bar a {
+		text-decoration: none;
+		color: #333;
+		transition: color 0.3s ease;
+	}
+
+	.menu-bar a:hover {
+		color: #007bff;
 	}
 </style>
