@@ -22,7 +22,7 @@
 			const nThreads = localStorage.getItem('threads');
 			threads = nThreads && parseInt(nThreads) || 1;
 			//generate a list of addresses for mining
-			const N = 2;
+			const N = 20;
 			addresses = await getMinerAddresses(N);
 			if (!addresses?.length) {
 				return;
@@ -46,14 +46,16 @@
 			isSwitching = true;
 			try {
 				await stopSidecar('minerd');
-				await ensureMinerdIsRunning('minerd', threads, addresses[curAddrPos]);
+				await ensureMinerdIsRunning(threads, addresses[curAddrPos]);
 			}catch(e) {
-				console.error('error switching miner address:', e);
+				console.log('error switching miner address');
+				console.error(e);
 			} finally {
 				isSwitching = false;
 			}
-			await sleep(10*60*1000); //10 minutes
+			console.log('switched mining to address:', addresses[curAddrPos]);
 			curAddrPos = (curAddrPos + 1) % addresses.length;
+			await sleep(10*60*1000); //10 minutes
 		}
 	}
 

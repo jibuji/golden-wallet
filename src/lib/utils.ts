@@ -26,7 +26,7 @@ export async function ensureBitbidIsRunning() {
 }
 
 
-export async function ensureMinerdIsRunning(name: string, threads: number, addr: string) {
+export async function ensureMinerdIsRunning(threads: number, addr: string) {
     const appDataDirPath = await appDataDir();
     console.log("appDataDirPath:", appDataDirPath);
     const minerDir = await join(appDataDirPath, 'minerd');
@@ -60,11 +60,11 @@ export async function stopSidecar(name: string) {
         const nodeDataDirPath = await join(appDataDirPath, 'bitbid');
         const pid = await getPid(`${nodeDataDirPath}/bitbid.pid`);
         if (pid) {
-            if (await isProcessRunning(pid)) {
-
+            while (await isProcessRunning(pid)) {
                 await killPid(pid);
-                console.log('bitbid stopped');
+                await sleep(1*1000);
             }
+            console.log('bitbid stopped');
         }
         return;
     }
@@ -73,10 +73,11 @@ export async function stopSidecar(name: string) {
         const minerDir = await join(appDataDirPath, 'minerd');
         const pid = await getPid(`${minerDir}/minerd.pid`);
         if (pid) {
-            if (await isProcessRunning(pid)) {
+            while (await isProcessRunning(pid)) {
                 await killPid(pid);
-                console.log('minerd stopped');
+                await sleep(1*1000);
             }
+            console.log('minerd stopped');
         }
         return;
     }
