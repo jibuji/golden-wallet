@@ -126,7 +126,7 @@
 
 	.input-group input {
 		width: 100px; /* Adjust as needed */
-		padding: 0px;
+		height: 1.5em;
 		border: 1px solid #ccc;
 		border-radius: 4px;
 	}

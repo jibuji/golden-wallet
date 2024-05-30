@@ -8,6 +8,7 @@
 
 	import type { LayoutData } from './$types';
 	import { toast } from '$lib/toast';
+	import { test } from '$lib/test';
 
 	export let data: LayoutData;
 
@@ -47,6 +48,7 @@
 		await backupWallet(MinerDefaultWallet, filePath);
 		toast('Wallet backed up successfully');
 	}
+	test();
 </script>
 
 <main>
