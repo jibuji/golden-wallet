@@ -107,6 +107,9 @@
               },
               {
                 "validator": "-datadir=\\S+"
+              },
+              {
+                "validator": "-rpcworkqueue=\\S+"
               }
             ]
           }

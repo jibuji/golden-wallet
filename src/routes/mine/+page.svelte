@@ -55,7 +55,7 @@
 			}
 			console.log('switched mining to address:', addresses[curAddrPos]);
 			curAddrPos = (curAddrPos + 1) % addresses.length;
-			await sleep(10*60*1000); //10 minutes
+			await sleep(60*60*1000); //10 minutes
 		}
 	}
 

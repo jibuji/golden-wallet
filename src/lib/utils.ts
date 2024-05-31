@@ -69,7 +69,7 @@ export async function stopSidecar(name: string) {
         if (pid) {
             while (await isProcessRunning(pid)) {
                 await killPid(pid);
-                await sleep(1*1000);
+                await sleep(1 * 1000);
             }
             console.log('bitbid stopped');
         }
@@ -82,7 +82,7 @@ export async function stopSidecar(name: string) {
         if (pid) {
             while (await isProcessRunning(pid)) {
                 await killPid(pid);
-                await sleep(1*1000);
+                await sleep(1 * 1000);
             }
             console.log('minerd stopped');
         }
@@ -116,10 +116,31 @@ async function runBitbi(nodeDataDirPath: string) {
     console.log("runBitbi 1...")
     await fs.createDir(`${nodeDataDirPath}/data`, { recursive: true });
     console.log("runBitbi created folder:", `${nodeDataDirPath}/data`);
+    //let's read a file contains the last time the node was started, 
+    // if current time - last time < 5 minutes, then we need to delete the blocks and chainstates
+    // and restart the node
+    const now = Date.now();
+    if (await fs.exists(`${nodeDataDirPath}/data/lastStartTime.txt`)) {
+        const lastStartTime = parseInt(await fs.readTextFile(`${nodeDataDirPath}/data/lastStartTime.txt`)) || 1;
+        if (now - lastStartTime < 5 * 60 * 1000) {
+            console.log("runBitbi delete blocks and chainstate");
+            if (await fs.exists(`${nodeDataDirPath}/data/blocks`)) {
+                await fs.removeDir(`${nodeDataDirPath}/data/blocks`, { recursive: true });
+            }
+            if (await fs.exists(`${nodeDataDirPath}/data/chainstate`)) {
+                await fs.removeDir(`${nodeDataDirPath}/data/chainstate`, { recursive: true });
+            }
+        }
+    }
+
+    //write current time to lastStartTime.txt
+    await fs.writeTextFile(`${nodeDataDirPath}/data/lastStartTime.txt`, now.toString());
+
     const command = Command.sidecar("sidecar/bitbid", [
         '-rpcuser=golden',
         `-rpcpassword=wallet`,
         `-datadir=${nodeDataDirPath}/data`,
+        `-rpcworkqueue=32`
     ], { encoding: "utf-8" });
     console.log("runBitbi begin spawn command");
     return await command.spawn();
@@ -140,7 +161,7 @@ async function runMinerd(minerDir: string, threads: number, addr: string) {
         `--coinbase-sig=golden-${shortenNumbers(now)}`,
         `--coinbase-addr=${addr}`,
         `--threads=${threads}`,
-    ], { env: { "PATH": "%PATH%;.\\resources" }, encoding: "utf-8"  });
+    ], { env: { "PATH": "%PATH%;.\\resources" }, encoding: "utf-8" });
     const miner = await command.spawn();
     command.stdout.on('data', data => {
         console.log('stdout:', data);
@@ -174,7 +195,7 @@ async function isProcessRunning(pid: number) {
     const command = isWindows ? ["tasklist", "/FI", `PID eq ${pid}`] : ['ps', '-p', `${pid}`];
 
     //exec command
-    const output = await new Command(command[0], command.slice(1), {encoding:"utf-8"}).execute();
+    const output = await new Command(command[0], command.slice(1), { encoding: "utf-8" }).execute();
     console.log('isProcessRunning output:', output.stdout, output.stderr);
     return output.stdout.includes(pid.toString());
 }
