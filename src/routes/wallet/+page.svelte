@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { sleep } from '$lib/utils';
+	import { checkIfNodeCaughtUp, sleep } from '$lib/utils';
 	import { getMinerWalletInfo } from '$lib/wallet-utils';
 	let availableBalance = 0.0;
 	let pendingBalance = 0.0;
@@ -12,6 +12,12 @@
 		let cancel = false;
 		async function walletInfoUpdateLoop() {
 			for (; !cancel; ) {
+				const caughtUp = await checkIfNodeCaughtUp();
+				if (!caughtUp) {
+					loading = true;
+					await sleep(10000);
+					continue;
+				}
 				try {
 					const info = await getMinerWalletInfo();
 					if (info) {
@@ -36,7 +42,6 @@
 </script>
 
 <div class="container">
-
 	<div class="nav-bar">
 		<a href="#">Overview</a>
 		<!-- <a href="#">Send</a>
@@ -87,7 +92,6 @@
 		font-family: Arial, sans-serif;
 		color: #333;
 	}
-
 
 	.nav-bar {
 		display: flex;

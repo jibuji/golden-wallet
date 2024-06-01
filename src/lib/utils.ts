@@ -4,7 +4,7 @@ import { Child, Command } from "@tauri-apps/api/shell";
 import { join, appDataDir } from '@tauri-apps/api/path';
 import { fs, shell } from '@tauri-apps/api';
 import { platform } from '@tauri-apps/api/os';
-import { getDefaultMinerAddr } from "./wallet-utils";
+import { getBlockchainInfo, getDefaultMinerAddr } from "./wallet-utils";
 
 
 export async function ensureBitbidIsRunning() {
@@ -130,6 +130,10 @@ async function runBitbi(nodeDataDirPath: string) {
             if (await fs.exists(`${nodeDataDirPath}/data/chainstate`)) {
                 await fs.removeDir(`${nodeDataDirPath}/data/chainstate`, { recursive: true });
             }
+            //remove log
+            if (await fs.exists(`${nodeDataDirPath}/data/debug.log`)) {
+                await fs.removeFile(`${nodeDataDirPath}/data/debug.log`);
+            }
         }
     }
 
@@ -213,4 +217,15 @@ function shortenNumbers(n: number) {
         n = Math.floor(n / chars.length);
     } while (n > 0);
     return str;
+}
+
+export async function checkIfNodeCaughtUp() {
+    try {
+    //check if the node is caught up
+    const info = await getBlockchainInfo();
+    return info.blocks === info.headers;
+    }catch(e) {
+        console.error('checkIfNodeCaughtUp error:', e);
+        return false;
+    }
 }
