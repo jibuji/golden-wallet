@@ -1,3 +1,4 @@
+import type { AddrPurpose, AddrType, IAddressInfo } from '$lib/types';
 import { fetch, Body } from '@tauri-apps/api/http';
 type RpcClientOptions = {
     host?: string;
@@ -8,6 +9,7 @@ type RpcClientOptions = {
     disableAgent?: boolean;
     rejectUnauthorized?: boolean;
 };
+
 
 type Logger = {
     info: Function;
@@ -56,7 +58,7 @@ const CALL_SPEC = {
     getAddressBalance: 'obj', // deprecated
     getAddressDeltas: 'obj', // deprecated
     // getAddressesByLabel: 'str',
-    getAddressInfo: 'str',
+    // getAddressInfo: 'str',
     getAddressTxids: 'obj', // deprecated
     getAddressesByAccount: '', // deprecated
     getBalance: 'str int',
@@ -128,13 +130,12 @@ const CALL_SPEC = {
     listAddressGroupings: '',
     listBanned: '',
     listDescriptors: '',
-    listLabels: '',
+    // listLabels: '',
     listLockUnspent: 'bool',
     listReceivedByAccount: 'int bool',
     listReceivedByAddress: 'int bool',
     listReceivedByLabel: '',
     listSinceBlock: 'str int',
-    listTransactions: 'str int int',
     listUnspent: 'int int',
     listWalletDir: '',
     listWallets: '',
@@ -158,7 +159,7 @@ const CALL_SPEC = {
     sendFrom: 'str str float int str str',
     sendMany: 'str obj int str',  //not sure this is will work
     sendRawTransaction: 'str',
-    sendToAddress: 'str float str str',
+    // sendToAddress: 'str float str str',
     setAccount: '',
     setBan: 'str str',
     setNetworkActive: 'bool',
@@ -234,7 +235,7 @@ class RpcClient {
         this.log = RpcClient.loggers[RpcClient.config.logger || 'normal'];
     }
 
-    async rpc(request: any, path=""): Promise<any> {
+    async rpc(request: any, path = ""): Promise<any> {
         const userInfo = `${this.user}:${this.pass}`;
         const auth = btoa(userInfo);
         console.log(`rpc request`, userInfo);
@@ -254,8 +255,8 @@ class RpcClient {
             console.log(`rpc fetch url`, url);
             console.log(`rpc fetch options`, options)
             const response = await fetch(url, {
-                method: 'POST', 
-                headers: {'Content-Type': 'application/json', 'Authorization': `Basic ${auth}`},
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${auth}` },
                 body: Body.json(request),
             });
             console.log(`rpc fetch response`, response)
@@ -288,8 +289,8 @@ class RpcClient {
         }
     }
 
-    async getNewAddress(wallet: string, label?: string, address_type?: string) {
-        const params:string[] = [];
+    async getNewAddress(wallet: string, label?: string, address_type?: AddrType): Promise<string> {
+        const params: string[] = [];
         if (label) {
             params.push(label);
         }
@@ -326,7 +327,7 @@ class RpcClient {
                 method: 'loadwallet',
                 params: [name],
                 id: getRandomId()
-             });
+            });
             return true;
         } catch (e) {
             console.log("loadWallet error:", e.code, "=", e.message)
@@ -372,7 +373,47 @@ class RpcClient {
         });
     }
 
-    // ... rest of the methods
+
+    async listLabels(wallet: string, purpose: AddrPurpose = 'receive') {
+        return await this.rpc({
+            method: 'listlabels',
+            params: [purpose],
+            id: getRandomId()
+        }, `wallet/${wallet}`);
+    }
+
+    async getAddressInfo(wallet: string, address: string): Promise<IAddressInfo> {
+        return await this.rpc({
+            method: 'getaddressinfo',
+            params: [address],
+            id: getRandomId()
+        }, `wallet/${wallet}`);
+    }
+
+    async sendToAddress(wallet: string, address: string, amount: number, comment: string, feeRate: number): Promise<string> {
+        const subtractfeefromamount = false;
+        const replaceable = true;
+        const conf_target = undefined;
+        const estimate_mode = 'unset';
+        const avoidReuse = false;
+        const verbose = true;
+        const result = await this.rpc({
+            method: 'sendtoaddress',
+            params: [address, amount, comment, 'ct', subtractfeefromamount, replaceable, conf_target,
+                estimate_mode, avoidReuse, feeRate, verbose],
+            id: getRandomId()
+        }, `wallet/${wallet}`);
+        console.log("sendToAddress result:", result);
+        return result.txid;
+    }
+
+    async listTransactions( wallet: string, label: string, count: number, skip: number, includeWatchOnly: boolean) {
+        return await this.rpc({
+            method: 'listtransactions',
+            params: [label, count, skip, includeWatchOnly],
+            id: getRandomId()
+        }, `wallet/${wallet}`);
+    }
 }
 
 function decodeURL(str: string) {
@@ -411,7 +452,7 @@ function generateRPCMethods(constructor: any, apiCalls: ApiCalls) {
                 }
             }
 
-            return await this.rpc( {
+            return await this.rpc({
                 method: methodName,
                 params: args.slice(0, args.length - 1),
                 id: getRandomId()

@@ -221,11 +221,25 @@ function shortenNumbers(n: number) {
 
 export async function checkIfNodeCaughtUp() {
     try {
-    //check if the node is caught up
-    const info = await getBlockchainInfo();
-    return info.blocks === info.headers;
-    }catch(e) {
+        //check if the node is caught up
+        const info = await getBlockchainInfo();
+        return info.blocks === info.headers && !info.initialblockdownload;
+    } catch (e) {
         console.error('checkIfNodeCaughtUp error:', e);
         return false;
     }
 }
+
+
+export function getShorter(address: string) {
+    if (address.length > 26) {
+        return address.slice(0, 10) + '......' + address.slice(-10);
+    }
+    return address;
+}
+
+export function formatUnixSec(sec: number) {
+    const date = new Date(sec * 1000); // If the timestamp is in seconds, multiply by 1000 to convert it to milliseconds
+    return date.toLocaleString(); // Adjust this to change the date format
+}
+

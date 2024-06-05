@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { getIsNodeCaughtUp } from '$lib/non-reactive-state';
 	import { ensureMinerdIsRunning, isSidecarRunning, sleep, stopSidecar } from '$lib/utils';
 	import { getMinerAddresses } from '$lib/wallet-utils';
 	import { onMount } from 'svelte';
@@ -6,48 +7,54 @@
 	let threads = 1;
 	let isRunning = false;
 	$: isInputVisible = !isRunning;
-	let addresses:string[] = [];
+	let addresses: string[] = [];
 	let curAddrPos = 0;
+	let isReady = false;
 	var isSwitching = false;
-	$: isReady = !!addresses.length;
 	$: {
-		console.log('isReady:', isReady);
-		console.log('addresses:', addresses);
+		console.log('miner waiting bitbid isReady:', isReady);
+		console.log('miner addresses:', addresses);
 	}
 
-	onMount( () => {
-	    let cancel = false;
+	onMount(() => {
+		let cancel = false;
 		async function checkRunningLoop() {
 			//load saved threads number set on last time
 			const nThreads = localStorage.getItem('threads');
-			threads = nThreads && parseInt(nThreads) || 1;
+			threads = (nThreads && parseInt(nThreads)) || 1;
 			//generate a list of addresses for mining
 			const N = 20;
-			addresses = await getMinerAddresses(N);
+			isReady = getIsNodeCaughtUp();
 			if (!addresses?.length) {
-				return;
+				addresses = await getMinerAddresses(N);
 			}
-	        isRunning = await isSidecarRunning("minerd");
-	        for (;!cancel;) {
-	            await sleep(10000);
-				if (!isSwitching) {
-	            	isRunning = await isSidecarRunning("minerd");
+			isRunning = await isSidecarRunning('minerd');
+			for (; !cancel; ) {
+				await sleep(10000);
+				isReady = getIsNodeCaughtUp();
+				if (!addresses?.length) {
+					addresses = await getMinerAddresses(N);
+					if (!addresses?.length) {
+						return;
+					}
 				}
-	            console.log("get minerd running:", isRunning);
-	        }
-	    }
-	    checkRunningLoop();
-	    return () => (cancel = true);
-	})
+				if (!isSwitching) {
+					isRunning = await isSidecarRunning('minerd');
+				}
+				console.log('get minerd running:', isRunning);
+			}
+		}
+		checkRunningLoop();
+		return () => (cancel = true);
+	});
 
 	async function switchMinerAddrLoop() {
-		
-		for (;isRunning;) {
+		for (; isRunning; ) {
 			isSwitching = true;
 			try {
 				await stopSidecar('minerd');
 				await ensureMinerdIsRunning(threads, addresses[curAddrPos]);
-			}catch(e) {
+			} catch (e) {
 				console.log('error switching miner address');
 				console.error(e);
 			} finally {
@@ -55,7 +62,7 @@
 			}
 			console.log('switched mining to address:', addresses[curAddrPos]);
 			curAddrPos = (curAddrPos + 1) % addresses.length;
-			await sleep(60*60*1000); //10 minutes
+			await sleep(60 * 60 * 1000); //10 minutes
 		}
 	}
 
@@ -89,7 +96,9 @@
 			<input id="threads" type="number" min="1" bind:value={threads} />
 		</div>
 		<div class="button-group">
-			<button class="start-mining" on:click={startMining} disabled={!isReady}>Start Mining</button>
+			<button class="start-mining" on:click={startMining} disabled={!isReady || !addresses?.length}
+				>Start Mining</button
+			>
 		</div>
 	{:else}
 		<div class="button-group">

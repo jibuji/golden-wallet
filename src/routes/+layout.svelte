@@ -3,12 +3,13 @@
 	import { MinerDefaultWallet, backupWallet, getBlockchainInfo, getDefaultMinerAddr, listWallets } from '$lib/wallet-utils';
 	import { onMount } from 'svelte';
 	import { save } from '@tauri-apps/api/dialog';
+	import { goto } from '$app/navigation';
 
-	let miner_enabled = false;
 
 	import type { LayoutData } from './$types';
 	import { toast } from '$lib/toast';
 	import { test } from '$lib/test';
+	import { ensureCheckingNodeLoopStarted } from '$lib/non-reactive-state';
 
 	export let data: LayoutData;
 
@@ -19,16 +20,25 @@
 		async function runEvery10Seconds() {
 			// fetch data from the server
 			for (; !cancel; ) {
-				const addr = await getDefaultMinerAddr();
-				miner_enabled = !!addr;
 				await ensureBitbidIsRunning();
 				await sleep(10000);
 			}
 		}
 
 		runEvery10Seconds();
-		return () => (cancel = true);
+		ensureCheckingNodeLoopStarted();
+
+		console.log('layout-onMount event triggered', window.location.pathname)
+
+		if (window.location.pathname === '/') {
+			goto('/wallet');
+			return;
+		}
+		return () => {
+			cancel = true; console.log('layout-onDestroy event triggered');
+		};
 	});
+
 	async function backupWalletDialog() {
 		// Add your backup wallet logic here
 		console.log('Backup Wallet clicked');
@@ -54,10 +64,7 @@
 <main>
 	<nav class="sidebar">
 		<ul>
-			<li class={data.location === '/' ? 'active' : ''}>
-				<a href="/"> Welcome </a>
-			</li>
-			<li class={data.location === '/wallet' ? 'active' : ''}>
+			<li class={data.location.startsWith('/wallet') ? 'active' : ''}>
 				<a href="/wallet"> Wallet </a>
 			</li>
 			<li class={data.location === '/mine' ? 'active' : ''}>
@@ -94,7 +101,7 @@
 <style>
 	main {
 		display: flex;
-		height: 100vh;
+		height: 100%;
 		font-family: Arial, sans-serif;
 	}
 
@@ -154,13 +161,14 @@
 	
 	.menu-bar ul {
 		list-style-type: none;
-		padding: 0;
+		padding: 0px;
 		display: flex;
 		justify-content: flex-start;
 		background-color: #f8f9fa;
 		border-radius: 5px;
 		box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
 		margin-block-start: 0px;
+		margin-block-end: 10px;
 	}
 
 	.menu-bar li {
