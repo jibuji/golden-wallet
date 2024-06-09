@@ -1,10 +1,15 @@
+<script>
+
+	import { page } from "$app/stores";
+
+</script>
 
 <div class="container">
 	<div class="nav-bar">
-		<a href="/wallet">Overview</a>
-		<a href="/wallet/send">Send</a>
-		<a href="/wallet/receive">Receive</a>
-		<a href="/wallet/transactions">Transactions</a>
+		<a href="/wallet" class:active={$page.url.pathname === '/wallet'}>Overview</a>
+		<a href="/wallet/send" class:active={$page.url.pathname === '/wallet/send'}>Send</a>
+		<a href="/wallet/receive" class:active={$page.url.pathname=== '/wallet/receive'}>Receive</a>
+		<a href="/wallet/transactions" class:active={$page.url.pathname === '/wallet/transactions'}>Transactions</a>
 	</div>
 
 	<div class="main-content">
@@ -37,6 +42,10 @@
 		color: #333;
 		font-weight: bold;
 	}
+
+	.nav-bar a.active {
+        color: #007bff;
+    }
 
 	.main-content {
 		display: flex;

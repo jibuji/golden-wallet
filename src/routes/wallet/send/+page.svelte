@@ -2,7 +2,7 @@
 	import { open } from '@tauri-apps/api/shell';
 	import { curWalletStore } from '$lib/store';
 	import { listRecentTransactions, sendToAddress } from '$lib/wallet-utils';
-	import { getShorter, sleep } from '$lib/utils';
+	import { formatUnixSec, getShorter, sleep } from '$lib/utils';
 	import { getIsNodeCaughtUp } from '$lib/non-reactive-state';
 	import { onMount } from 'svelte';
 	import type { ITransaction } from '$lib/types';
@@ -12,6 +12,7 @@
 	let currentBalance = 0.0;
 	let amount = 0.0;
 	let txLoading = true;
+	let isSending = false;
 	let wallet: string;
 	$: {
 		wallet = $curWalletStore;
@@ -39,15 +40,22 @@
 			alert('Please select a wallet');
 			return;
 		}
-		const txid = await sendToAddress(wallet, recipient, amount, comment, transactionFee);
-		console.log('Transaction ID:', txid);
+		isSending = true;
+		try {
+			const txid = await sendToAddress(wallet, recipient, amount, comment, transactionFee);
+			console.log('Transaction ID:', txid);
+			sentTransactions = await listRecentTransactions(wallet, 5, 'send');
+		} catch (e) {
+			console.log(`sendBitbi error:`, e);
+		} finally {
+			isSending = false;
+		}
 	}
 
 	let sentTransactions: ITransaction[] = [];
 	function openTransactionDetails(txid: string) {
-        open(`https://explorer.bitbi.org/tx/${txid}`);
-    }
-
+		open(`https://explorer.bitbi.org/tx/${txid}`);
+	}
 
 	onMount(() => {
 		let cancel = false;
@@ -58,7 +66,8 @@
 					txLoading = true;
 					continue;
 				}
-				const txes = await listRecentTransactions(wallet, 5, "send");
+				txLoading = true;
+				const txes = await listRecentTransactions(wallet, 5, 'send');
 				sentTransactions = txes;
 				txLoading = false;
 			}
@@ -114,19 +123,37 @@
 	</form>
 	<div class="sent-transactions">
 		<h2>Sent Transactions</h2>
-		{#if txLoading}
+		{#if txLoading && !sentTransactions.length}
 			<p>Loading...</p>
 		{:else}
-			<ul>
-				{#each sentTransactions as txid (txid)}
-					<li>
-						<!-- svelte-ignore a11y-invalid-attribute -->
-						<a href="#" on:click|preventDefault={() => openTransactionDetails(txid)}>{getShorter(txid)}</a>
-					</li>
-				{/each}
-			</ul>
+			<table>
+				<thead>
+					<tr>
+						<th>TxID</th>
+						<th>Comment</th>
+						<th>Date Time</th>
+					</tr>
+				</thead>
+				<tbody>
+					{#each sentTransactions as tx (tx.txid)}
+						<tr>
+							<td>
+								<!-- svelte-ignore a11y-invalid-attribute -->
+								<a href="#" on:click|preventDefault={() => openTransactionDetails(tx.txid)}
+									>{getShorter(tx.txid)}</a
+								>
+							</td>
+							<td>{tx.comment}</td>
+							<td>{formatUnixSec(tx.time)}</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
 		{/if}
 	</div>
+	{#if isSending}
+		<div class="loading-popup">Sending transaction...</div>
+	{/if}
 </div>
 
 <style>
@@ -193,39 +220,58 @@
 		font-size: 1em;
 	}
 	.sent-transactions {
-        max-width: 1000px;
-        margin: 20px auto;
-        padding: 20px;
-        background-color: #f8f9fa;
-        border-radius: 5px;
-        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    }
+		max-width: 1000px;
+		margin: 20px auto;
+		padding: 20px;
+		background-color: #fff;
+		box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+		border-radius: 5px;
+	}
 
-    .sent-transactions h2 {
-        margin-bottom: 20px;
-        color: #007bff;
-    }
+	.sent-transactions h2 {
+		margin-bottom: 20px;
+		color: #333;
+		font-size: 24px;
+	}
 
-    .sent-transactions ul {
-        list-style-type: none;
-        padding: 0;
-    }
+	.sent-transactions table {
+		width: 100%;
+		border-collapse: collapse;
+	}
 
-    .sent-transactions li {
-        padding: 10px;
-        border-bottom: 1px solid #ddd;
-    }
+	.sent-transactions th,
+	.sent-transactions td {
+		padding: 10px;
+		border: 1px solid #ddd;
+	}
 
-    .sent-transactions li:last-child {
-        border-bottom: none;
-    }
+	.sent-transactions th {
+		background-color: #f2f2f2;
+	}
 
-    .sent-transactions a {
-        color: #007bff;
-        text-decoration: none;
-    }
+	.sent-transactions tr:hover {
+		background-color: #f5f5f5;
+	}
 
-    .sent-transactions a:hover {
-        text-decoration: underline;
-    }
+	.sent-transactions a {
+		color: #007bff;
+		text-decoration: none;
+	}
+
+	.sent-transactions a:hover {
+		color: #0056b3;
+	}
+	.loading-popup {
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background-color: rgba(0, 0, 0, 0.5);
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		color: white;
+		font-size: 2em;
+	}
 </style>
