@@ -5,9 +5,9 @@
 	import { formatUnixSec, getShorter } from '$lib/utils';
 	import { listRecentTransactions, listTransactions } from '$lib/wallet-utils';
 	import { onMount } from 'svelte';
+	import { getIsNodeCaughtUp } from '$lib/non-reactive-state';
 
 	let wallet: string;
-	let searchQuery = '';
 	$: {
 		wallet = $curWalletStore;
 	}
@@ -17,12 +17,16 @@
 	let pageSize = 10; // Adjust this to change the number of transactions per page
 
 	async function fetchPagedTx() {
-		const tx = await listTransactions(wallet, '*', pageSize, (page - 1) * pageSize);
-		pageTxes = tx.sort((a, b) => b.time - a.time);
+		try {
+			const tx = await listTransactions(wallet, '*', pageSize, (page - 1) * pageSize);
+			pageTxes = tx.sort((a, b) => b.time - a.time);
+		} catch (e) {
+			console.error('fetchPagedTx e:', e);
+		}
 	}
-	onMount(async () => {
+	onMount( () => {
 		// Fetch the transactions for the current page
-		await fetchPagedTx();
+		fetchPagedTx();
 	});
 
 	const changePage = async (newPage: number) => {
@@ -168,6 +172,6 @@
 	.pagination span {
 		font-size: 18px;
 		color: #333;
-        margin: 20px;
+		margin: 20px;
 	}
 </style>

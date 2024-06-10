@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { open } from '@tauri-apps/api/shell';
 	import { curWalletStore } from '$lib/store';
+
 	import { listRecentTransactions, sendToAddress } from '$lib/wallet-utils';
 	import { formatUnixSec, getShorter, sleep } from '$lib/utils';
 	import { getIsNodeCaughtUp } from '$lib/non-reactive-state';
@@ -17,6 +18,8 @@
 	$: {
 		wallet = $curWalletStore;
 	}
+	let showModal = false;
+	let curTxId = '';
 	async function sendBitbi() {
 		// Form validation
 		if (!recipient) {
@@ -42,9 +45,12 @@
 		}
 		isSending = true;
 		try {
-			const txid = await sendToAddress(wallet, recipient, amount, comment, transactionFee);
-			console.log('Transaction ID:', txid);
+			curTxId = await sendToAddress(wallet, recipient, amount, comment, transactionFee);
+			console.log('Transaction ID:', curTxId);
 			sentTransactions = await listRecentTransactions(wallet, 5, 'send');
+
+			// Show the modal with the transaction ID
+			showModal = true;
 		} catch (e) {
 			console.log(`sendBitbi error:`, e);
 		} finally {
@@ -153,6 +159,17 @@
 	</div>
 	{#if isSending}
 		<div class="loading-popup">Sending transaction...</div>
+	{/if}
+	{#if showModal}
+		<div class="modal">
+			<div class="modal-content">
+				<h2>Transaction successful!</h2>
+				<p>
+					Transaction ID: <a href="https://explorer.bitbi.org/tx/{curTxId}" target="_blank">{curTxId}</a>
+				</p>
+				<button on:click={() => (showModal = false)}>Close</button>
+			</div>
+		</div>
 	{/if}
 </div>
 
@@ -273,5 +290,22 @@
 		align-items: center;
 		color: white;
 		font-size: 2em;
+	}
+	.modal {
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background-color: rgba(0, 0, 0, 0.5);
+		display: flex;
+		justify-content: center;
+		align-items: center;
+	}
+
+	.modal-content {
+		background-color: white;
+		padding: 20px;
+		border-radius: 10px;
 	}
 </style>
