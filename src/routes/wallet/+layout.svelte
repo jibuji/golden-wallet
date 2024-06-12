@@ -1,11 +1,9 @@
 <script>
 	import { page } from '$app/stores';
-	import {curBcInfo, curWalletInfo} from '$lib/store';
-
+	import { curBcInfo, curWalletInfo } from '$lib/store';
 
 	$: isCaughtUp = !$curBcInfo.initialblockdownload && $curBcInfo.blocks === $curBcInfo.headers;
 	$: walletReady = !!$curWalletInfo && isCaughtUp;
-
 </script>
 
 <div class="container">
