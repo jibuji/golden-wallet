@@ -3,9 +3,8 @@
 	import { curWalletStore } from '$lib/store';
 	import type { ITransaction } from '$lib/types';
 	import { formatUnixSec, getShorter } from '$lib/utils';
-	import { listRecentTransactions, listTransactions } from '$lib/wallet-utils';
+	import {  listTransactions } from '$lib/wallet-utils';
 	import { onMount } from 'svelte';
-	import { getIsNodeCaughtUp } from '$lib/non-reactive-state';
 
 	let wallet: string;
 	$: {

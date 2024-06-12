@@ -1,15 +1,16 @@
 <script lang="ts">
-	import { getIsNodeCaughtUp } from '$lib/non-reactive-state';
 	import { ensureMinerdIsRunning, isSidecarRunning, sleep, stopSidecar } from '$lib/utils';
 	import { getMinerAddresses } from '$lib/wallet-utils';
 	import { onMount } from 'svelte';
+	import {curBcInfo} from '$lib/store';
+
+	$: isReady = !$curBcInfo.initialblockdownload && $curBcInfo.blocks === $curBcInfo.headers;
 
 	let threads = 1;
 	let isRunning = false;
 	$: isInputVisible = !isRunning;
 	let addresses: string[] = [];
 	let curAddrPos = 0;
-	let isReady = false;
 	var isSwitching = false;
 	$: {
 		console.log('miner waiting bitbid isReady:', isReady);
@@ -24,14 +25,12 @@
 			threads = (nThreads && parseInt(nThreads)) || 1;
 			//generate a list of addresses for mining
 			const N = 20;
-			isReady = getIsNodeCaughtUp();
 			if (!addresses?.length) {
 				addresses = await getMinerAddresses(N);
 			}
 			isRunning = await isSidecarRunning('minerd');
 			for (; !cancel; ) {
 				await sleep(10000);
-				isReady = getIsNodeCaughtUp();
 				if (!addresses?.length) {
 					addresses = await getMinerAddresses(N);
 					if (!addresses?.length) {

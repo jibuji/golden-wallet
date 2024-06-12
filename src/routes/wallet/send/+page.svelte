@@ -1,10 +1,9 @@
 <script lang="ts">
 	import { open } from '@tauri-apps/api/shell';
-	import { curWalletStore } from '$lib/store';
+	import { curWalletStore, curBcInfo } from '$lib/store';
 
 	import { listRecentTransactions, sendToAddress } from '$lib/wallet-utils';
 	import { formatUnixSec, getShorter, sleep } from '$lib/utils';
-	import { getIsNodeCaughtUp } from '$lib/non-reactive-state';
 	import { onMount } from 'svelte';
 	import type { ITransaction } from '$lib/types';
 	let recipient = '';
@@ -14,10 +13,10 @@
 	let amount = 0.0;
 	let txLoading = true;
 	let isSending = false;
-	let wallet: string;
-	$: {
-		wallet = $curWalletStore;
-	}
+	$: wallet = $curWalletStore;
+
+	$: isCaughtUp = !$curBcInfo.initialblockdownload && $curBcInfo.blocks === $curBcInfo.headers;
+
 	let showModal = false;
 	let curTxId = '';
 	async function sendBitbi() {
@@ -67,8 +66,7 @@
 		let cancel = false;
 		async function recentTxLoop() {
 			for (; !cancel; await sleep(10000)) {
-				const caughtUp = getIsNodeCaughtUp();
-				if (!caughtUp) {
+				if (!isCaughtUp) {
 					txLoading = true;
 					continue;
 				}

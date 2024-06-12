@@ -138,7 +138,7 @@ const CALL_SPEC = {
     listSinceBlock: 'str int',
     listUnspent: 'int int',
     listWalletDir: '',
-    listWallets: '',
+    // listWallets: '',
     // loadWallet: 'str',
     lockUnspent: '',
     logging: '',
@@ -319,6 +319,14 @@ class RpcClient {
             console.log("getAddressesByLabel error:", e.code, "=", e.message);
             return null;
         }
+    }
+
+    async listWallets() {
+        return await this.rpc({
+            method: 'listwallets',
+            params: [],
+            id: getRandomId()
+        });
     }
 
     async loadWallet(name: string) {

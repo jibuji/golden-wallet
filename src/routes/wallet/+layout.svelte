@@ -1,31 +1,11 @@
 <script>
 	import { page } from '$app/stores';
-	import { getIsNodeCaughtUp } from '$lib/non-reactive-state';
-	import { sleep } from '$lib/utils';
-	import { MinerDefaultWallet, ensureLoadWallet, getMinerWalletInfo } from '$lib/wallet-utils';
-	import { onMount } from 'svelte';
-	let walletReady = false;
-	onMount(() => {
-		let cancel = false;
-		async function walletInfoUpdateLoop() {
-			for (; !cancel; await sleep(10000)) {
-				const caughtUp = getIsNodeCaughtUp();
-				if (!caughtUp) {
-					continue;
-				}
-				try {
-					await ensureLoadWallet(MinerDefaultWallet);
-					const info = await getMinerWalletInfo();
-					walletReady = !!info;
-				} catch (e) {
-					console.error('wallet layout', e);
-					walletReady = false;
-				}
-			}
-		}
-		walletInfoUpdateLoop();
-		return () => (cancel = true);
-	});
+	import {curBcInfo, curWalletInfo} from '$lib/store';
+
+
+	$: isCaughtUp = !$curBcInfo.initialblockdownload && $curBcInfo.blocks === $curBcInfo.headers;
+	$: walletReady = !!$curWalletInfo && isCaughtUp;
+
 </script>
 
 <div class="container">

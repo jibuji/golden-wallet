@@ -1,40 +1,35 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { getMinerWalletInfo } from '$lib/wallet-utils';
-	import { getIsNodeCaughtUp } from '$lib/non-reactive-state';
+	import {curBcInfo} from '$lib/store';
+
 	import { sleep } from '$lib/utils';
 	let availableBalance = 0.0;
 	let pendingBalance = 0.0;
 	let immatureBalance = 0.0;
 	let totalBalance = availableBalance + pendingBalance;
-	let loading = true;
+	$: loading = $curBcInfo.initialblockdownload || $curBcInfo.blocks !== $curBcInfo.headers;
+	$: loadingProgress = $curBcInfo.headers ? ($curBcInfo.blocks / $curBcInfo.headers) * 100 : 0;
+	$: isCaughtUp = loadingProgress === 100 && !loading;
 
 	onMount(() => {
 		let cancel = false;
 		async function walletInfoUpdateLoop() {
-			for (; !cancel; ) {
-				const caughtUp = getIsNodeCaughtUp();
-				if (!caughtUp) {
-					loading = true;
-					await sleep(10000);
+			for (; !cancel; await sleep(10000)) {
+				if (!isCaughtUp) {
 					continue;
 				}
 				try {
 					const info = await getMinerWalletInfo();
 					if (info) {
-						loading = false;
 						availableBalance = info.balance;
 						pendingBalance = info.unconfirmed_balance;
 						immatureBalance = info.immature_balance;
 						totalBalance = availableBalance + pendingBalance + immatureBalance;
-					} else {
-						loading = true;
-					}
+					} 
 				} catch (e) {
 					console.error(e);
-					loading = true;
 				}
-				await sleep(10000);
 			}
 		}
 		walletInfoUpdateLoop();

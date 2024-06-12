@@ -1,5 +1,5 @@
 import Client from "./bitbi-rpc/index";
-import type { AddrType, IAddressInfo, ITransaction, IWalletInfo, TransactionCategory } from "./types";
+import type { AddrType, IAddressInfo, IBlockchainInfo, ITransaction, IWalletInfo, TransactionCategory } from "./types";
 
 export const MinerDefaultWallet = "default";
 export const MinerReceiveAddrLabel = "miner";
@@ -106,9 +106,8 @@ export async function getWalletInfo(name: string): Promise<IWalletInfo> {
     return walletInfo;
 }
 
-export async function getBlockchainInfo() {
+export async function getBlockchainInfo():Promise<IBlockchainInfo> {
     const info = await gCli.getBlockchainInfo();
-    console.log("blockchain info:", info);
     return info;
 }
 

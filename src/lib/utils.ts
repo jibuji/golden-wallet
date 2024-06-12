@@ -113,13 +113,13 @@ export async function isSidecarRunning(name: string) {
 }
 
 async function runBitbi(nodeDataDirPath: string) {
-    console.log("runBitbi 1...")
     await fs.createDir(`${nodeDataDirPath}/data`, { recursive: true });
     console.log("runBitbi created folder:", `${nodeDataDirPath}/data`);
     //let's read a file contains the last time the node was started, 
     // if current time - last time < 5 minutes, then we need to delete the blocks and chainstates
     // and restart the node
     const now = Date.now();
+    const nodeLogName = 'debug.log';
     if (await fs.exists(`${nodeDataDirPath}/data/lastStartTime.txt`)) {
         const lastStartTime = parseInt(await fs.readTextFile(`${nodeDataDirPath}/data/lastStartTime.txt`)) || 1;
         if (now - lastStartTime < 5 * 60 * 1000) {
@@ -131,9 +131,18 @@ async function runBitbi(nodeDataDirPath: string) {
                 await fs.removeDir(`${nodeDataDirPath}/data/chainstate`, { recursive: true });
             }
             //remove log
-            if (await fs.exists(`${nodeDataDirPath}/data/debug.log`)) {
-                await fs.removeFile(`${nodeDataDirPath}/data/debug.log`);
+            if (await fs.exists(`${nodeDataDirPath}/data/${nodeLogName}`)) {
+                await fs.renameFile(`${nodeDataDirPath}/data/${nodeLogName}`, `${nodeDataDirPath}/data/${nodeLogName}.${now}`);
             }
+        }
+    }
+
+    //delete very old debug.log
+    const files = await fs.readDir(`${nodeDataDirPath}/data`, {recursive: false});
+    for (const file of files) {
+        const sevenDays = 7 * 24 * 60 * 60 * 1000;
+        if (file.name?.startsWith(`${nodeLogName}.`) && parseInt(file.name.slice(10)) < now - sevenDays) {
+            await fs.removeFile(`${nodeDataDirPath}/data/${file.name}`);
         }
     }
 

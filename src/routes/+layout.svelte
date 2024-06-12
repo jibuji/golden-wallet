@@ -1,42 +1,18 @@
 <script lang="ts">
-	import { ensureBitbidIsRunning, sleep } from '$lib/utils';
-	import { MinerDefaultWallet, backupWallet, getBlockchainInfo, getDefaultMinerAddr, listWallets } from '$lib/wallet-utils';
+	import { page } from '$app/stores';
+	import { MinerDefaultWallet, backupWallet } from '$lib/wallet-utils';
 	import { onMount } from 'svelte';
 	import { save } from '@tauri-apps/api/dialog';
 	import { goto } from '$app/navigation';
 
-
-	import type { LayoutData } from './$types';
 	import { toast } from '$lib/toast';
 	import { test } from '$lib/test';
-	import { ensureCheckingNodeLoopStarted } from '$lib/non-reactive-state';
-
-	export let data: LayoutData;
-
-	//log onMount event
 
 	onMount(() => {
-		let cancel = false;
-		async function runEvery10Seconds() {
-			// fetch data from the server
-			for (; !cancel; ) {
-				await ensureBitbidIsRunning();
-				await sleep(10000);
-			}
-		}
-
-		runEvery10Seconds();
-		ensureCheckingNodeLoopStarted();
-
-		console.log('layout-onMount event triggered', window.location.pathname)
-
-		if (window.location.pathname === '/') {
+		if ($page.url.pathname === '/') {
 			goto('/wallet');
 			return;
 		}
-		return () => {
-			cancel = true; console.log('layout-onDestroy event triggered');
-		};
 	});
 
 	async function backupWalletDialog() {
@@ -64,10 +40,10 @@
 <main>
 	<nav class="sidebar">
 		<ul>
-			<li class={data.location.startsWith('/wallet') ? 'active' : ''}>
+			<li class={$page.url.pathname.startsWith('/wallet') ? 'active' : ''}>
 				<a href="/wallet"> Wallet </a>
 			</li>
-			<li class={data.location === '/mine' ? 'active' : ''}>
+			<li class={$page.url.pathname === '/mine' ? 'active' : ''}>
 				<a href="/mine"> Mine </a>
 			</li>
 		</ul>
@@ -158,7 +134,7 @@
 		padding-left: 10px;
 		padding-right: 10px;
 	}
-	
+
 	.menu-bar ul {
 		list-style-type: none;
 		padding: 0px;

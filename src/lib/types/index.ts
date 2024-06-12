@@ -90,3 +90,19 @@ export interface ITransaction {
   abandoned: boolean
 }
 
+
+export interface IBlockchainInfo {
+  chain: string
+  blocks: number
+  headers: number
+  bestblockhash: string
+  difficulty: number
+  mediantime: number
+  time: number
+  verificationprogress: number
+  initialblockdownload: boolean
+  chainwork: string
+  size_on_disk: number
+  pruned: boolean
+  warnings: string
+}
