@@ -252,3 +252,8 @@ export function formatUnixSec(sec: number) {
     return date.toLocaleString(); // Adjust this to change the date format
 }
 
+export function formatNumber(num: number, frDigits: number = 2) {
+    return num.toLocaleString('en-US', {
+        maximumFractionDigits: frDigits,
+    });
+}
