@@ -11,7 +11,12 @@ export const loadedWalletsStore = writable([]); // list of wallet names
 // the curWalletStore must be one of the loadedWallets
 export const curWalletStore = writable("default");
 
+let curWalletInfSetFn = (value: IWalletInfo) => {};
+let walletName = "";
 export const curWalletInfo = derived(curWalletStore, ($curWallet, set) => {
+    curWalletInfSetFn = set;
+    walletName = $curWallet;
+    
     ensureLoadWallet($curWallet).then(() => {
         return getWalletInfo($curWallet);
     }).then(set);
@@ -37,6 +42,10 @@ async function nodeLoop() {
             await sleep(2000);
             const bcInfo = await getBlockchainInfo();
             curBcInfo.set(bcInfo);
+            // if we have caught up with the blockchain, we update the wallet info
+            if (walletName && !bcInfo.initialblockdownload && bcInfo.headers === bcInfo.blocks) {
+                await getWalletInfo(walletName).then(curWalletInfSetFn);
+            }
         } catch (e) {
             console.error("nodeLoop", e);
         }
