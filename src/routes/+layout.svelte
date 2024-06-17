@@ -6,7 +6,10 @@
 	import { goto } from '$app/navigation';
 
 	import { toast } from '$lib/toast';
-	import { test } from '$lib/test';
+	import {errStore} from '$lib/store';
+	import type { CodeError } from '$lib/error';
+	let err : CodeError| null;
+  	$: { err = $errStore;}
 
 	onMount(() => {
 		if ($page.url.pathname === '/') {
@@ -34,9 +37,18 @@
 		await backupWallet(MinerDefaultWallet, filePath);
 		toast('Wallet backed up successfully');
 	}
-	test();
+
 </script>
 
+<div id="errorModal" class="modal" style="display: {err ? 'block' : 'none'}">
+	<div class="modal-content">
+	<button class="close" on:click={() => err = null} aria-label="Close">&times;</button>
+	{#if err}
+		<p>Error Code: [{err.code}]</p>
+		<p>Error Message: {err.message}</p>
+	{/if}
+</div>
+</div>
 <main>
 	<nav class="sidebar">
 		<ul>
@@ -193,4 +205,41 @@
 	.menu-bar a:hover {
 		color: #007bff;
 	}
+
+	.modal {
+    display: none; /* Hidden by default */
+    position: fixed; /* Stay in place */
+    z-index: 1; /* Sit on top */
+    left: 0;
+    top: 0;
+    width: 100%; /* Full width */
+    height: 100%; /* Full height */
+    overflow: auto; /* Enable scroll if needed */
+    background-color: rgb(0,0,0); /* Fallback color */
+    background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+  }
+
+  /* Modal Content/Box */
+  .modal-content {
+    background-color: #fefefe;
+    margin: 15% auto; /* 15% from the top and centered */
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%; /* Could be more or less, depending on screen size */
+  }
+
+  /* The Close Button */
+  .close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+  }
+
+  .close:hover,
+  .close:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
+  }
 </style>

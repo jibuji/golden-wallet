@@ -4,27 +4,58 @@ import { Child, Command } from "@tauri-apps/api/shell";
 import { join, appDataDir } from '@tauri-apps/api/path';
 import { fs, shell } from '@tauri-apps/api';
 import { platform } from '@tauri-apps/api/os';
-import { getBlockchainInfo, getDefaultMinerAddr } from "./wallet-utils";
+import { getBlockchainInfo } from "./wallet-utils";
+import { CodeError, ErrorCode } from './error';
 
+async function strangeLog(m: string) {
+    const appDataDirPath = await appDataDir();
+    console.log("appDataDirPath:", appDataDirPath);
+    const nodeDataDirPath = await join(appDataDirPath, 'bitbid');
+    await fs.writeFile(`${nodeDataDirPath}/strange.log`, m, { append: true });
+}
 
 export async function ensureBitbidIsRunning() {
     try {
         const appDataDirPath = await appDataDir();
         console.log("appDataDirPath:", appDataDirPath);
         const nodeDataDirPath = await join(appDataDirPath, 'bitbid');
+
         const pid = await getPid(`${nodeDataDirPath}/bitbid.pid`);
         if (pid) {
-            if (await isProcessRunning(pid)) {
-                console.log('bitbid is running')
+            if (await isBitbidRunning(pid)) {
+                console.log(`bitbid with pid ${pid} is running`)
                 return;
             }
         }
+        const pid2 = await getPid(`${nodeDataDirPath}/data/bitbid.pid`);
+        if (pid2 && pid2 !== pid) {
+            await strangeLog(`two pid isn't the same: ${pid} and ${pid2}`);
+            if (await isBitbidRunning(pid2)) {
+                console.log(`bitbid with pid2 ${pid} is running`)
+                return;
+            }
+        }
+
         const child = await runBitbi(nodeDataDirPath);
         //write pid into bitbid.pid
         await fs.writeFile(`${nodeDataDirPath}/bitbid.pid`, child.pid.toString());
+        //wait for child.pid process is running and no more than xx seconds
+        let count = 0;
+        while (count < 20) {
+            await sleep(5 * 1000);
+            count++;
+            if (await isBitbidRunning(child.pid)) {
+                console.log('wait bitbid after runBitbi:  running successfully')
+                return;
+            }
+        }
+        console.log('wait bitbid after runBitbi:  running failed')
         return;
     } catch (e) {
         console.log("ensureBitbidIsRunning error:", e);
+        if (e instanceof CodeError) {
+            throw e;
+        }
     }
 }
 
@@ -120,16 +151,11 @@ async function runBitbi(nodeDataDirPath: string) {
     // and restart the node
     const now = Date.now();
     const nodeLogName = 'debug.log';
+    let reindex = false;
     if (await fs.exists(`${nodeDataDirPath}/data/lastStartTime.txt`)) {
         const lastStartTime = parseInt(await fs.readTextFile(`${nodeDataDirPath}/data/lastStartTime.txt`)) || 1;
         if (now - lastStartTime < 5 * 60 * 1000) {
-            console.log("runBitbi delete blocks and chainstate");
-            if (await fs.exists(`${nodeDataDirPath}/data/blocks`)) {
-                await fs.removeDir(`${nodeDataDirPath}/data/blocks`, { recursive: true });
-            }
-            if (await fs.exists(`${nodeDataDirPath}/data/chainstate`)) {
-                await fs.removeDir(`${nodeDataDirPath}/data/chainstate`, { recursive: true });
-            }
+            reindex = true;
             //remove log
             if (await fs.exists(`${nodeDataDirPath}/data/${nodeLogName}`)) {
                 await fs.renameFile(`${nodeDataDirPath}/data/${nodeLogName}`, `${nodeDataDirPath}/data/${nodeLogName}.${now}`);
@@ -138,7 +164,7 @@ async function runBitbi(nodeDataDirPath: string) {
     }
 
     //delete very old debug.log
-    const files = await fs.readDir(`${nodeDataDirPath}/data`, {recursive: false});
+    const files = await fs.readDir(`${nodeDataDirPath}/data`, { recursive: false });
     for (const file of files) {
         const sevenDays = 7 * 24 * 60 * 60 * 1000;
         if (file.name?.startsWith(`${nodeLogName}.`) && parseInt(file.name.slice(10)) < now - sevenDays) {
@@ -153,7 +179,8 @@ async function runBitbi(nodeDataDirPath: string) {
         '-rpcuser=golden',
         `-rpcpassword=wallet`,
         `-datadir=${nodeDataDirPath}/data`,
-        `-rpcworkqueue=32`
+        `-rpcworkqueue=32`,
+        `-reindex=${reindex ? '1' : '0'}`,
     ], { encoding: "utf-8" });
     console.log("runBitbi begin spawn command");
     return await command.spawn();
@@ -161,7 +188,6 @@ async function runBitbi(nodeDataDirPath: string) {
 
 async function runMinerd(minerDir: string, threads: number, addr: string) {
     await fs.createDir(minerDir, { recursive: true });
-    // const addr = await getDefaultMinerAddr();
     if (!addr) {
         console.error('miner address not found');
         throw new Error('miner address not found');
@@ -194,7 +220,7 @@ async function getPid(path: string) {
     try {
         const pid = await fs.readTextFile(path);
         console.log("getPid:", pid);
-        return parseInt(pid);
+        return parseInt(pid.trim());
     } catch (e) {
         return null;
     }
@@ -210,7 +236,35 @@ async function isProcessRunning(pid: number) {
     //exec command
     const output = await new Command(command[0], command.slice(1), { encoding: "utf-8" }).execute();
     console.log('isProcessRunning output:', output.stdout, output.stderr);
+    console.log('isProcessRunning code:', output.code, "; signal", output.signal);
     return output.stdout.includes(pid.toString());
+}
+
+async function isBitbidRunning(pid: number) {
+    if (await isProcessRunning(pid)) {
+        return true;
+    }
+    const platformName = await platform();
+    const isWindows = platformName === 'win32';
+    if (isWindows) {
+        return false;
+    }
+    //if not windows, double check if there is a process with the pid,name,port using `ss`
+    const BitbidPort = 9800;
+    const output = await new Command("ss", ['-tlp', `sport = :${BitbidPort}`], { encoding: "utf-8" }).execute();
+    console.log('isBitbidRunning output:', output.stdout, output.stderr);
+    console.log('isBitbidRunning code:', output.code, "; signal", output.signal);
+    let running = output.stdout.includes(pid.toString()) || output.stdout.includes('bitbid');
+    if (running) {
+        console.log('port 9800 is already opened');
+        strangeLog(`port 9800 is already opened, but 'ps -p ${pid}' not found bitbid, and 'ss' found this: ${output.stdout}`);
+        return true;
+    }
+    if (!running && output.stdout.includes(BitbidPort.toString())) {
+        // There is other process that using 9800 port, throw error
+        throw new CodeError(ErrorCode.PORT_ALREADY_IN_USE, 'There is other process that using port 9800 , please stop it first');
+    }
+    return running;
 }
 
 export async function sleep(ms: number) {

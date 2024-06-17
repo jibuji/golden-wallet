@@ -8,7 +8,7 @@
   },
   "package": {
     "productName": "golden-wallet",
-    "version": "0.2.1"
+    "version": "0.2.2"
   },
   "tauri": {
     "allowlist": {
@@ -64,6 +64,18 @@
             ]
           },
           {
+            "name": "ss",
+            "cmd": "ss",
+            "args": [
+              {
+                "validator": "-tlp"
+              },
+              {
+                "validator": "sport\\s*=\\s*:\\S+"
+              }
+            ]
+          },
+          {
             "name": "taskkill",
             "cmd": "taskkill",
             "args": [
@@ -111,6 +123,9 @@
               },
               {
                 "validator": "-rpcworkqueue=\\S+"
+              },
+              {
+                "validator": "-reindex=\\S+"
               }
             ]
           }

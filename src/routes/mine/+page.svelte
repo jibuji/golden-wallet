@@ -1,90 +1,85 @@
 <script lang="ts">
-	import { ensureMinerdIsRunning, isSidecarRunning, sleep, stopSidecar } from '$lib/utils';
-	import { getMinerAddresses } from '$lib/wallet-utils';
+	import { sleep } from '$lib/utils';
 	import { onMount } from 'svelte';
-	import {curBcInfo} from '$lib/store';
+	import { curBcInfo, curWalletStore, errStore } from '$lib/store';
+	import {
+		getMinerThreads,
+		isMinerRunning,
+		isMinerScheduled,
+		scheduleMiner,
+		setMinerThreads,
+		startMiner,
+		stopMiner,
+		unscheduleMiner
+	} from '$lib/miner-utils';
+	import { getMinerAddresses } from '$lib/wallet-utils';
 
 	$: isReady = !$curBcInfo.initialblockdownload && $curBcInfo.blocks === $curBcInfo.headers;
 
-	let threads = 1;
+	let threads = getMinerThreads() || 1;
 	let isRunning = false;
-	$: isInputVisible = !isRunning;
-	let addresses: string[] = [];
-	let curAddrPos = 0;
-	var isSwitching = false;
+	let isScheduled = false;
+	$: isInputVisible = isReady ? !isRunning : !isRunning && !isScheduled;
+	$: curWalletName = $curWalletStore;
 	$: {
 		console.log('miner waiting bitbid isReady:', isReady);
-		console.log('miner addresses:', addresses);
+		setMinerThreads(threads);
 	}
 
 	onMount(() => {
 		let cancel = false;
 		async function checkRunningLoop() {
 			//load saved threads number set on last time
-			const nThreads = localStorage.getItem('threads');
-			threads = (nThreads && parseInt(nThreads)) || 1;
-			//generate a list of addresses for mining
-			const N = 20;
-			if (!addresses?.length) {
-				addresses = await getMinerAddresses(N);
-			}
-			isRunning = await isSidecarRunning('minerd');
+			isScheduled = await isMinerScheduled();
+			isRunning = await isMinerRunning();
 			for (; !cancel; ) {
-				await sleep(10000);
-				if (!addresses?.length) {
-					addresses = await getMinerAddresses(N);
-					if (!addresses?.length) {
-						return;
-					}
+				try {
+					await sleep(10000);
+					isScheduled = isMinerScheduled();
+					isRunning = await isMinerRunning();
+					console.log('get minerd running:', isRunning);
+				} catch (e) {
+					console.log('checkRunningLoop error:', e);
 				}
-				if (!isSwitching) {
-					isRunning = await isSidecarRunning('minerd');
-				}
-				console.log('get minerd running:', isRunning);
 			}
 		}
 		checkRunningLoop();
 		return () => (cancel = true);
 	});
 
-	async function switchMinerAddrLoop() {
-		for (; isRunning; ) {
-			isSwitching = true;
-			try {
-				await stopSidecar('minerd');
-				await ensureMinerdIsRunning(threads, addresses[curAddrPos]);
-			} catch (e) {
-				console.log('error switching miner address');
-				console.error(e);
-			} finally {
-				isSwitching = false;
-			}
-			console.log('switched mining to address:', addresses[curAddrPos]);
-			curAddrPos = (curAddrPos + 1) % addresses.length;
-			await sleep(60 * 60 * 1000); //10 minutes
-		}
-	}
-
 	async function startMining() {
-		console.log('start mining with', threads, 'threads');
-		localStorage.setItem('threads', threads.toString());
 		isRunning = true;
-		isInputVisible = false;
-		switchMinerAddrLoop();
+		await startMiner(curWalletName);
 	}
 
 	async function stopMining() {
-		console.log('stop mining');
-		await stopSidecar('minerd');
 		isRunning = false;
-		isInputVisible = true;
+		console.log('stop mining');
+		await stopMiner();
+	}
+
+	async function scheduleMining() {
+		isScheduled = true;
+		await scheduleMiner();
+	}
+
+	async function unscheduleMining() {
+		isScheduled = false;
+		await unscheduleMiner();
 	}
 </script>
 
 <div class="main">
 	<div class="status-section">
+		{#if !isReady}
+			<div class="status not-ready">Node is not ready yet, waiting...</div>
+		{/if}
 		{#if isRunning}
 			<div class="status running">{`Miner working with ${threads} threads`}</div>
+		{:else if isScheduled}
+			<div class="status scheduled">
+				Miner is scheduled to start with {threads} threads when Node is ready
+			</div>
 		{:else}
 			<div class="status stopped">Miner stopped</div>
 		{/if}
@@ -95,13 +90,19 @@
 			<input id="threads" type="number" min="1" bind:value={threads} />
 		</div>
 		<div class="button-group">
-			<button class="start-mining" on:click={startMining} disabled={!isReady || !addresses?.length}
-				>Start Mining</button
-			>
+			{#if isReady}
+				<button class="start-mining" on:click={startMining}>Start Mining</button>
+			{:else}
+				<button class="schedule-mining" on:click={scheduleMining}>Schedule Mining</button>
+			{/if}
 		</div>
 	{:else}
 		<div class="button-group">
-			<button class="stop-mining" on:click={stopMining}>Stop Mining</button>
+			{#if isRunning}
+				<button class="stop-mining" on:click={stopMining}>Stop Mining</button>
+			{:else}
+				<button class="unschedule-mining" on:click={unscheduleMining}>Unschedule Mining</button>
+			{/if}
 		</div>
 	{/if}
 </div>
@@ -112,21 +113,30 @@
 		font-family: Arial, sans-serif;
 	}
 	.status-section {
-		margin-bottom: 30px;
-		padding: 10px 0;
+		margin: 20px 0;
+		padding: 10px;
 		border-radius: 5px;
+		font-size: 1.2em;
+		box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
 	}
 	.status {
-		font-size: 2em;
-		font-weight: bold;
+		padding: 10px;
+		border-radius: 5px;
+		color: white;
+		margin: 10px 0;
+		box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.1);
 	}
-	.running {
-		color: #4caf50; /* A more pleasing shade of green */
-		background-color: #c8e6c9; /* Light green background */
+	.status.not-ready {
+		background-color: #f0ad4e;
 	}
-	.stopped {
-		color: #f44336; /* A more pleasing shade of red */
-		background-color: #ffcdd2; /* Light red background */
+	.status.running {
+		background-color: #5cb85c;
+	}
+	.status.scheduled {
+		background-color: #5bc0de;
+	}
+	.status.stopped {
+		background-color: #d9534f;
 	}
 	.input-group {
 		margin-bottom: 20px;
@@ -162,7 +172,15 @@
 		background-color: #4caf50;
 	}
 
+	button.schedule-mining {
+		background-color: #4caf50;
+	}
+
 	button.start-mining:hover {
+		background-color: #45a049;
+	}
+
+	button.schedule-mining:hover {
 		background-color: #45a049;
 	}
 
@@ -171,6 +189,13 @@
 	}
 
 	button.stop-mining:hover {
+		background-color: #d32f2f;
+	}
+	button.unschedule-mining {
+		background-color: #f44336;
+	}
+
+	button.unschedule-mining:hover {
 		background-color: #d32f2f;
 	}
 </style>

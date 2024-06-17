@@ -37,83 +37,91 @@
 	});
 </script>
 
-{#if loadingProgress < 100}
-    <div class="popup">
-        <div class="popup-content">
-            <h2>Please wait...</h2>
-            <p>We're preparing your wallet information. This may take a few minutes.</p>
-            <div class="progress-bar">
-                <div class="progress-bar-fill" style="width: {loadingProgress}%;"></div>
-            </div>
-            <p>Progress: {formatNumber(loadingProgress)}%</p>
-        </div>
-    </div>
-{/if}
-<div class="balances">
-	<div>
-		<h2>
-			Balances
+<div class="main">
+	<div class="balances">
+		<div>
+			<h2>
+				Balances
 
-			<!-- <img src="alert-icon.png" alt="Alert Icon" width="20" height="20" /> -->
-		</h2>
-		<!-- {#if loading}
+				<!-- <img src="alert-icon.png" alt="Alert Icon" width="20" height="20" /> -->
+			</h2>
+			<!-- {#if loading}
             <span class="loading-status"> Loading...</span>
         {/if} -->
+		</div>
+		<div class="balance-item">
+			<span>Available:</span> <span>{availableBalance.toFixed(4)} BTB</span>
+		</div>
+		<div class="balance-item">
+			<span>Pending:</span> <span>{pendingBalance.toFixed(4)} BTB</span>
+		</div>
+		<div class="balance-item">
+			<span>Immature:</span> <span>{immatureBalance.toFixed(4)} BTB</span>
+		</div>
+		<hr />
+		<div class="balance-item">
+			<span>Total:</span> <span>{totalBalance.toFixed(4)} BTB</span>
+		</div>
 	</div>
-	<div class="balance-item">
-		<span>Available:</span> <span>{availableBalance.toFixed(4)} BTB</span>
-	</div>
-	<div class="balance-item">
-		<span>Pending:</span> <span>{pendingBalance.toFixed(4)} BTB</span>
-	</div>
-	<div class="balance-item">
-		<span>Immature:</span> <span>{immatureBalance.toFixed(4)} BTB</span>
-	</div>
-	<hr />
-	<div class="balance-item">
-		<span>Total:</span> <span>{totalBalance.toFixed(4)} BTB</span>
-	</div>
+	{#if loadingProgress < 100}
+		<div class="popup">
+			<div class="popup-content">
+				<h2>Please wait...</h2>
+				<p>We're preparing your wallet information. This may take a few minutes.</p>
+				<div class="progress-bar">
+					<div class="progress-bar-fill" style="width: {loadingProgress}%;"></div>
+				</div>
+				<p>Progress: {formatNumber(loadingProgress)}%</p>
+			</div>
+		</div>
+	{/if}
 </div>
 
 <style>
+	.main {
+		position: relative;
+		width: 100%;
+		height: 100%;
+	}
+
 	.popup {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.5);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-    }
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background-color: rgba(0, 0, 0, 0.5);
+		display: flex;
+		justify-content: center;
+		align-items: center;
+	}
 
-    .popup-content {
-        background-color: white;
-        padding: 20px;
-        border-radius: 10px;
-        width: 80%;
-        max-width: 500px;
-        text-align: center;
-    }
+	.popup-content {
+		background-color: white;
+		padding: 20px;
+		border-radius: 10px;
+		width: 80%;
+		text-align: center;
+	}
 
-    .progress-bar {
-        background-color: #f3f3f3;
-        border-radius: 5px;
-        width: 100%;
-        height: 20px;
-        margin: 10px 0;
-    }
+	.progress-bar {
+		background-color: #f3f3f3;
+		border-radius: 5px;
+		width: 100%;
+		height: 20px;
+		margin: 10px 0;
+	}
 
-    .progress-bar-fill {
-        background-color: #4caf50;
-        height: 100%;
-        border-radius: 5px;
-    }
+	.progress-bar-fill {
+		background-color: #4caf50;
+		height: 100%;
+		border-radius: 5px;
+	}
 
 	.balances {
-		width: 48%;
+		width: 100%;
 		max-width: 500px;
+		height: 100%;
 		border: 1px solid #e0e0e0;
 		padding: 20px;
 		background-color: #f8f8f8;

@@ -42,32 +42,15 @@ export async function ensureLoadWallet(name: string) {
     }
 }
 
-export async function getDefaultMinerAddr() {
+export async function getMinerAddresses(wallet: string, n: number) {
     try {
-        await ensureLoadWallet(MinerDefaultWallet);
-        let addrs = await gCli.getAddressesByLabel(MinerDefaultWallet, MinerReceiveAddrLabel);
-        console.log("address:", addrs);
-        if (!addrs) {
-            const newaddr = await gCli.getNewAddress(MinerDefaultWallet, MinerReceiveAddrLabel);
-            console.log("new address:", newaddr);
-            addrs = [newaddr];
-        }
-        return addrs[0];
-    } catch (e) {
-        console.error('getDefaultMinerAddr', e)
-    }
-}
-
-export async function getMinerAddresses(n: number) {
-    try {
-        await ensureLoadWallet(MinerDefaultWallet);
-        let addrs = await gCli.getAddressesByLabel(MinerDefaultWallet, MinerReceiveAddrLabel);
+        let addrs = await gCli.getAddressesByLabel(wallet, MinerReceiveAddrLabel);
         console.log("address:", addrs);
         if (!addrs) {
             addrs = []
         }
         while (addrs.length < n) {
-            const newaddr = await gCli.getNewAddress(MinerDefaultWallet, MinerReceiveAddrLabel);
+            const newaddr = await gCli.getNewAddress(wallet, MinerReceiveAddrLabel);
             console.log("new address:", newaddr);
             addrs.push(newaddr);
         }

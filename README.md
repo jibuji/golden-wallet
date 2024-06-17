@@ -1,38 +1,18 @@
-# create-svelte
+## Welcome to Golden Wallet! 🎉
 
-Everything you need to build a Svelte project, powered by [`create-svelte`](https://github.com/sveltejs/kit/tree/main/packages/create-svelte).
+Your one-stop, secure, and user-friendly digital wallet for all things BTB coins (also known as BiTBi or 'bit bean'). With Golden Wallet, you can easily manage, mine, and even chat using your BTB coins right from your device. 
 
-## Creating a project
+Our mission? To make cryptocurrency simple and fun! 🚀
 
-If you're seeing this, you've probably already done this step. Congrats!
+### With Golden Wallet, you can:
+- Create and manage multiple wallets with ease
+- Keep track of your balances in real-time
+- View your transaction history at a glance
+- Send and receive BTB coins with just a few clicks
+- Swap one cryptocurrency for another without breaking a sweat
 
-```bash
-# create a new project in the current directory
-npm create svelte@latest
+And the best part? Golden Wallet is designed to work seamlessly on both desktop and mobile devices(will be available soon). Plus, we've baked in top-notch encryption and authentication measures to keep your funds safe and secure. 
 
-# create a new project in my-app
-npm create svelte@latest my-app
-```
+So why wait? Dive in and start exploring the world of BTB coins with Golden Wallet today! 🌟 
 
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```bash
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
-
-## Building
-
-To create a production version of your app:
-
-```bash
-npm run build
-```
-
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://kit.svelte.dev/docs/adapters) for your target environment.
+Go to check the release page to download the latest version of Golden Wallet here: [Releases](https://github.com/bitbi-core/golden-wallet/releases)
