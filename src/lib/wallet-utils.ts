@@ -63,10 +63,6 @@ export async function getMinerAddresses(wallet: string, n: number) {
 
 
 
-export async function getMinerWalletInfo(): Promise<IWalletInfo> {
-    return await getWalletInfo(MinerDefaultWallet);
-}
-
 export async function getAddressesByLabel(wallet: string, label: string) {
     return await gCli.getAddressesByLabel(wallet, label);
 }

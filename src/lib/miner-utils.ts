@@ -12,9 +12,11 @@ const needMine: Readable<string> = derived([nodeCaughtUpStore, curWalletStore], 
 });
 
 needMine.subscribe((walletName) => {
-    if (!isMinerScheduled()) {
+    console.log('needMine:', walletName)
+    if (!isMinerScheduled() || !walletName) {
         return;
     }
+    console.log('begin start switchMinerAddrLoop:', walletName);
     stopMiner().finally(() => {
         switchMinerAddrLoop(walletName);
     });
