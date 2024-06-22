@@ -19,7 +19,6 @@ export async function ensureBitbidIsRunning() {
         const appDataDirPath = await appDataDir();
         console.log("appDataDirPath:", appDataDirPath);
         const nodeDataDirPath = await join(appDataDirPath, 'bitbid');
-
         const pid = await getPid(`${nodeDataDirPath}/bitbid.pid`);
         if (pid) {
             if (await isBitbidRunning(pid)) {
@@ -35,7 +34,6 @@ export async function ensureBitbidIsRunning() {
                 return;
             }
         }
-
         const child = await runBitbi(nodeDataDirPath);
         //write pid into bitbid.pid
         await fs.writeFile(`${nodeDataDirPath}/bitbid.pid`, child.pid.toString());
@@ -171,10 +169,9 @@ async function runBitbi(nodeDataDirPath: string) {
             await fs.removeFile(`${nodeDataDirPath}/data/${file.name}`);
         }
     }
-
+    
     //write current time to lastStartTime.txt
     await fs.writeTextFile(`${nodeDataDirPath}/data/lastStartTime.txt`, now.toString());
-
     const command = Command.sidecar("sidecar/bitbid", [
         '-rpcuser=golden',
         `-rpcpassword=wallet`,
@@ -245,8 +242,8 @@ async function isBitbidRunning(pid: number) {
         return true;
     }
     const platformName = await platform();
-    const isWindows = platformName === 'win32';
-    if (isWindows) {
+    const isLinux = platformName === 'linux';
+    if (!isLinux) {
         return false;
     }
     //if not windows, double check if there is a process with the pid,name,port using `ss`
@@ -254,7 +251,7 @@ async function isBitbidRunning(pid: number) {
     const output = await new Command("ss", ['-tlp', `sport = :${BitbidPort}`], { encoding: "utf-8" }).execute();
     console.log('isBitbidRunning output:', output.stdout, output.stderr);
     console.log('isBitbidRunning code:', output.code, "; signal", output.signal);
-    let running = output.stdout.includes(pid.toString()) || output.stdout.includes('bitbid');
+    const running = output.stdout.includes(pid.toString()) || output.stdout.includes('bitbid');
     if (running) {
         console.log('port 9800 is already opened');
         strangeLog(`port 9800 is already opened, but 'ps -p ${pid}' not found bitbid, and 'ss' found this: ${output.stdout}`);

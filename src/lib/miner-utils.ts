@@ -65,9 +65,13 @@ export async function startMiner(walletName: string) {
 export async function stopMiner() {
     gCancel = true;
     isSwitching = true;
-    await stopSidecar('minerd');
-    while (isSwitching) {
-        await sleep(500);
+    try {
+      await stopSidecar('minerd');
+      while (isSwitching) {
+          await sleep(500);
+      }
+    }finally {
+      isSwitching = false;
     }
 }
 export function getMinerThreads() {
