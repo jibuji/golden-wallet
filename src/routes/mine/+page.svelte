@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { sleep } from '$lib/utils';
 	import { onMount } from 'svelte';
-	import { curBcInfo, curWalletStore, errStore } from '$lib/store';
+	import { curBcInfo } from '$lib/store';
+	import { fade } from 'svelte/transition';
+
 	import {
 		getMinerThreads,
 		isMinerRunning,
@@ -12,15 +14,14 @@
 		stopMiner,
 		unscheduleMiner
 	} from '$lib/miner-utils';
-	import { getMinerAddresses } from '$lib/wallet-utils';
 
 	$: isReady = !$curBcInfo.initialblockdownload && $curBcInfo.blocks === $curBcInfo.headers;
 
 	let threads = getMinerThreads() || 1;
 	let isRunning = false;
 	let isScheduled = false;
+	let popupMessage = '';
 	$: isInputVisible = isReady ? !isRunning : !isRunning && !isScheduled;
-	$: curWalletName = $curWalletStore;
 	$: {
 		console.log('miner waiting bitbid isReady:', isReady);
 		setMinerThreads(threads);
@@ -37,7 +38,7 @@
 					await sleep(10000);
 					isScheduled = isMinerScheduled();
 					isRunning = await isMinerRunning();
-					console.log('get minerd running:', isRunning);
+					console.log('get minerd running and scheduled:', isRunning, isScheduled);
 				} catch (e) {
 					console.log('checkRunningLoop error:', e);
 				}
@@ -49,13 +50,18 @@
 
 	async function startMining() {
 		isRunning = true;
-		await startMiner(curWalletName);
+		popupMessage = 'Starting mining...';
+		await startMiner();
+		popupMessage = 'Mining started!';
+		setTimeout(() => (popupMessage = ''), 2000);
 	}
 
 	async function stopMining() {
 		isRunning = false;
-		console.log('stop mining');
+		popupMessage = 'Stopping mining...';
 		await stopMiner();
+		popupMessage = 'Mining stopped!';
+    	setTimeout(() => (popupMessage = ''), 2000);
 	}
 
 	async function scheduleMining() {
@@ -76,7 +82,7 @@
 		{/if}
 		{#if isRunning}
 			<div class="status running">{`Miner working with ${threads} threads`}</div>
-		{:else if isScheduled}
+		{:else if isScheduled && !isReady}
 			<div class="status scheduled">
 				Miner is scheduled to start with {threads} threads when Node is ready
 			</div>
@@ -103,6 +109,11 @@
 			{:else}
 				<button class="unschedule-mining" on:click={unscheduleMining}>Unschedule Mining</button>
 			{/if}
+		</div>
+	{/if}
+	{#if popupMessage}
+		<div class="popup" transition:fade={{ delay: 500, duration: 1000 }}>
+			{popupMessage}
 		</div>
 	{/if}
 </div>
@@ -197,5 +208,17 @@
 
 	button.unschedule-mining:hover {
 		background-color: #d32f2f;
+	}
+	.popup {
+		position: fixed;
+		bottom: 20px;
+		left: 50%;
+		transform: translateX(-50%);
+		padding: 10px 20px;
+		background-color: #333;
+		color: #fff;
+		border-radius: 5px;
+		opacity: 0.9;
+		text-align: center;
 	}
 </style>

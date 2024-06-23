@@ -1,7 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { curBcInfo, curWalletInfo } from '$lib/store';
-
+	import { curBcInfo, curWalletInfoStore } from '$lib/store';
 	import { formatNumber } from '$lib/utils';
 	let availableBalance = 0.0;
 	let pendingBalance = 0.0;
@@ -11,11 +9,12 @@
 	$: loadingProgress = $curBcInfo.headers ? ($curBcInfo.blocks / $curBcInfo.headers) * 100 : 0;
 	$: isCaughtUp = loadingProgress === 100 && !loading;
 	$: {
-		const wInfo = $curWalletInfo;
+		console.log('wallet page isCaughtUp:', isCaughtUp, loadingProgress)
+		const wInfo = $curWalletInfoStore;
 		if (isCaughtUp && wInfo) {
-			availableBalance = wInfo.balance;
-			pendingBalance = wInfo.unconfirmed_balance;
-			immatureBalance = wInfo.immature_balance;
+			availableBalance = wInfo.balance || 0;
+			pendingBalance = wInfo.unconfirmed_balance || 0;
+			immatureBalance = wInfo.immature_balance || 0;
 			totalBalance = availableBalance + pendingBalance + immatureBalance;
 		}
 	}

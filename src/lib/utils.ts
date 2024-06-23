@@ -61,7 +61,6 @@ export async function ensureBitbidIsRunning() {
 export async function ensureMinerdIsRunning(threads: number, addr: string) {
     try {
         const appDataDirPath = await appDataDir();
-        console.log("appDataDirPath:", appDataDirPath);
         const minerDir = await join(appDataDirPath, 'minerd');
         const pid = await getPid(`${minerDir}/minerd.pid`);
         if (pid) {

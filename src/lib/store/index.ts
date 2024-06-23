@@ -14,10 +14,8 @@ export const curWalletStore = writable("default");
 
 export const nodeCaughtUpStore = writable(false);
 
-let curWalletInfSetFn = (value: IWalletInfo) => { };
 let walletName = "";
-export const curWalletInfo = derived([curWalletStore, nodeCaughtUpStore], ([$curWallet, $nodeCaughtUpStore], set) => {
-    curWalletInfSetFn = set;
+export const curWalletInfoStore = derived([curWalletStore, nodeCaughtUpStore], ([$curWallet, $nodeCaughtUpStore], set) => {
     walletName = $curWallet;
     console.log("derived curWalletInfo nodeCaughtUpStore ", $curWallet, $nodeCaughtUpStore)
     if (!$curWallet || !$nodeCaughtUpStore) {
