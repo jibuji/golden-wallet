@@ -3,7 +3,7 @@
 import { Child, Command } from "@tauri-apps/api/shell";
 import { join, appDataDir } from '@tauri-apps/api/path';
 import { fs, shell } from '@tauri-apps/api';
-import { platform } from '@tauri-apps/api/os';
+import { arch, platform } from '@tauri-apps/api/os';
 import { getBlockchainInfo } from "./wallet-utils";
 import { CodeError, ErrorCode } from './error';
 
@@ -188,12 +188,14 @@ async function runMinerd(minerDir: string, threads: number, addr: string) {
         console.error('miner address not found');
         throw new Error('miner address not found');
     }
+    const archt = await arch();
+    const platformt = await platform();
     // const errLogFile = `${minerDir}/minerd.err.log`;
     const outLogFile = `${minerDir}/minerd.out.log`;
     const now = Date.now();
     const command = Command.sidecar("sidecar/minerd", [
         '--url=http://golden:wallet@127.0.0.1:9800',
-        `--coinbase-sig=golden-${shortenNumbers(now)}`,
+        `--coinbase-sig=${archt}-${platformt}-${shortenNumbers(now)}`,
         `--coinbase-addr=${addr}`,
         `--threads=${threads}`,
     ], { env: { "PATH": "%PATH%;.\\resources" }, encoding: "utf-8" });

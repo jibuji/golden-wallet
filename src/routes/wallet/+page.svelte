@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { curBcInfo, curWalletInfoStore } from '$lib/store';
+	import { curBcInfo, curWalletInfoStore, curWalletStore } from '$lib/store';
 	import { formatNumber } from '$lib/utils';
 	let availableBalance = 0.0;
 	let pendingBalance = 0.0;
@@ -8,6 +8,7 @@
 	$: loading = $curBcInfo.initialblockdownload || $curBcInfo.blocks !== $curBcInfo.headers;
 	$: loadingProgress = $curBcInfo.headers ? ($curBcInfo.blocks / $curBcInfo.headers) * 100 : 0;
 	$: isCaughtUp = loadingProgress === 100 && !loading;
+	$: isWalletLoading = $curWalletStore !== $curWalletInfoStore?.walletname;
 	$: {
 		console.log('wallet page isCaughtUp:', isCaughtUp, loadingProgress)
 		const wInfo = $curWalletInfoStore;
@@ -56,6 +57,13 @@
 					<div class="progress-bar-fill" style="width: {loadingProgress}%;"></div>
 				</div>
 				<p>Progress: {formatNumber(loadingProgress)}%</p>
+			</div>
+		</div>
+	{:else if isWalletLoading}
+		<div class="popup">
+			<div class="popup-content">
+				<h2>Almost ready...</h2>
+				<p>Your wallet is loading. This may take for a while.</p>
 			</div>
 		</div>
 	{/if}

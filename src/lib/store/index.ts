@@ -37,13 +37,13 @@ export const curBcInfo = writable({ initialblockdownload: true } as IBlockchainI
 let gNodeLoopCancelled = false;
 async function nodeLoop() {
     let count = 0;
-    for (; !gNodeLoopCancelled; await sleep(10 * 1000)) {
+    for (; !gNodeLoopCancelled; count++, await sleep(10 * 1000)) {
         try {
             if (count % 10 == 0) {
                 await ensureBitbidIsRunning();
                 await sleep(2000);
             }
-            const bcInfo = await getBlockchainInfo();
+            const bcInfo = (await getBlockchainInfo()) || {} as IBlockchainInfo;
             curBcInfo.set(bcInfo);
             // if we have caught up with the blockchain, we update the wallet info
             if (walletName && !bcInfo.initialblockdownload && bcInfo.headers === bcInfo.blocks) {
