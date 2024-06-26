@@ -1,15 +1,33 @@
 <script lang="ts">
+	import { minerIsSwitchingWalletStore } from '$lib/miner-utils';
 	import { page } from '$app/stores';
-	import { MinerDefaultWallet, backupWallet } from '$lib/wallet-utils';
+	import { MinerDefaultWallet, backupWallet, restoreWallet } from '$lib/wallet-utils';
 	import { onMount } from 'svelte';
-	import { save } from '@tauri-apps/api/dialog';
+	import { save, open } from '@tauri-apps/api/dialog';
 	import { goto } from '$app/navigation';
 
 	import { toast } from '$lib/toast';
-	import {errStore} from '$lib/store';
-	import type { CodeError } from '$lib/error';
-	let err : CodeError| null;
-  	$: { err = $errStore;}
+	import {
+		errStore,
+		allWalletsStore,
+		curBcInfo,
+		curWalletStore,
+		curWalletInfoStore
+	} from '$lib/store';
+	import { CodeError, ErrorCode } from '$lib/error';
+
+	let err: CodeError | null;
+	$: wallets = $allWalletsStore || [];
+	$: isWalletLoading = $curWalletStore !== $curWalletInfoStore?.walletname;
+	$: isCaughtUp =
+		!$curBcInfo.initialblockdownload &&
+		$curBcInfo.blocks === $curBcInfo.headers &&
+		$curBcInfo.headers > 0;
+	$: {
+		console.log('all wallets', $allWalletsStore);
+		console.log('cur wallet', $curWalletStore);
+		err = $errStore;
+	}
 
 	onMount(() => {
 		if ($page.url.pathname === '/') {
@@ -34,20 +52,78 @@
 			console.log('No file path selected, cancelled');
 			return;
 		}
-		await backupWallet(MinerDefaultWallet, filePath);
-		toast('Wallet backed up successfully');
+		try {
+			await backupWallet(MinerDefaultWallet, filePath);
+			toast('Wallet backed up successfully');
+		} catch (e: unknown) {
+			console.error('Error backing up wallet:', e);
+			if (e instanceof Error) {
+				const err = new CodeError(ErrorCode.BACKUP_WALLET_FAILED, e.message);
+				errStore.set(err);
+				return;
+			}
+			const err = new CodeError(ErrorCode.UNKNOWN);
+			errStore.set(err);
+			return;
+		}
 	}
 
+	async function importWalletDialog() {
+		// Add your import wallet logic here
+		console.log('Import Wallet clicked');
+		const selected = await open({
+			title: 'Import Wallet',
+			multiple: false,
+			filters: [
+				{
+					name: 'Wallet',
+					extensions: ['dat']
+				}
+			]
+		});
+		let walletFile: string;
+		if (Array.isArray(selected)) {
+			walletFile = selected[0];
+		} else if (selected === null) {
+			console.log('No file selected, cancelled');
+			toast('No file selected, cancelled');
+			return;
+		} else {
+			walletFile = selected;
+		}
+		// Ask the user for the wallet name
+		const walletName = window.prompt('Please enter a new name of the wallet you want to import');
+		if (walletName === null || walletName === '') {
+			console.log('No wallet name entered, cancelled');
+			toast('No wallet name entered, cancelled');
+			return;
+		}
+		// Import the wallet
+		try {
+			await restoreWallet(walletName, walletFile);
+			toast('Wallet imported successfully');
+		} catch (e) {
+			console.error('Error import wallet:', e);
+			if (e instanceof Error) {
+				const err = new CodeError(ErrorCode.RESTORE_WALLET_FAILED, e.message);
+				errStore.set(err);
+				return;
+			}
+			const err = new CodeError(ErrorCode.UNKNOWN);
+			errStore.set(err);
+			return;
+		}
+	}
 </script>
 
 <div id="errorModal" class="modal" style="display: {err ? 'block' : 'none'}">
 	<div class="modal-content">
-	<button class="close" on:click={() => err = null} aria-label="Close">&times;</button>
-	{#if err}
-		<p>Error Code: [{err.code}]</p>
-		<p>Error Message: {err.message}</p>
-	{/if}
-</div>
+		<button class="close" on:click={() => (err = null)} aria-label="Close">&times;</button>
+		{#if err}
+			<p>Error Code: [{err.code}]</p>
+			<p>Error Message: {err.message}</p>
+		{/if}
+	</div>
 </div>
 <main>
 	<nav class="sidebar">
@@ -68,22 +144,43 @@
 					<a href="#">File</a>
 					<ul>
 						<li><a href="#" on:click|preventDefault={backupWalletDialog}>Backup Wallet...</a></li>
-						<!-- <li><a href="#">Submenu 2</a></li> -->
+						<li><a href="#" on:click|preventDefault={importWalletDialog}>Import Wallet...</a></li>
 					</ul>
 				</li>
-				<!-- <li>
-					<a href="#">about</a>
-					<ul>
-						<li><a href="#">Submenu 1</a></li>
-						<li><a href="#">Submenu 2</a></li>
-					</ul>
-				</li> -->
 			</ul>
+			{#if isCaughtUp}
+				<div class="wallet-selector">
+					<span>current wallet: </span>
+					<select bind:value={$curWalletStore} disabled={$minerIsSwitchingWalletStore}>
+						{#each wallets as wallet (wallet)}
+							<option>{wallet}</option>
+						{/each}
+					</select>
+				</div>
+			{/if}
 		</div>
 		<div class="content">
 			<slot></slot>
 		</div>
 	</section>
+	{#if isWalletLoading && isCaughtUp}
+		<div class="popup">
+			<div class="popup-content">
+				<h2>Almost ready...</h2>
+				<p>Your wallet is loading. This may take for a while.</p>
+			</div>
+		</div>
+	{/if}
+	{#if $minerIsSwitchingWalletStore && isCaughtUp}
+		<div class="popup">
+			<div class="popup-content">
+				<h2>
+					Switching mining to the wallet <span class="wallet-name">{$curWalletStore}</span>...
+				</h2>
+				<p>This may take for 2 minutes...</p>
+			</div>
+		</div>
+	{/if}
 </main>
 
 <style>
@@ -91,6 +188,31 @@
 		display: flex;
 		height: 100%;
 		font-family: Arial, sans-serif;
+	}
+
+	.wallet-name {
+		color: #3498db; /* Change this to the color you want */
+		font-weight: bold; /* Makes the text bold */
+	}
+
+	.popup {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background-color: rgba(0, 0, 0, 0.5);
+		display: flex;
+		justify-content: center;
+		align-items: center;
+	}
+
+	.popup-content {
+		background-color: white;
+		padding: 20px;
+		border-radius: 10px;
+		width: 80%;
+		text-align: center;
 	}
 
 	nav.sidebar {
@@ -146,17 +268,49 @@
 		padding-left: 10px;
 		padding-right: 10px;
 	}
+	.menu-bar {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 0 10px;
+		background-color: #f8f9fa;
+	}
+	.wallet-selector {
+		display: flex;
+		align-items: baseline;
+		flex: 0 0 auto;
+		background-color: #f8f9fa;
+	}
+	select {
+		margin: 0 5px;
+		padding: 0 5px;
+		height: 2em;
+		min-width: 5em;
+		font-size: 16px;
+		border: none;
+		border-radius: 5px;
+		background-color: #b9c1ca;
+		color: #333;
+		-webkit-appearance: none; /* Removes the default dropdown button in Chrome/Edge */
+		-moz-appearance: none; /* Removes the default dropdown button in Firefox */
+		appearance: none; /* Removes the default dropdown button in other browsers */
+	}
+
+	/* select:focus {
+		outline: none;
+	} */
 
 	.menu-bar ul {
 		list-style-type: none;
 		padding: 0px;
 		display: flex;
 		justify-content: flex-start;
-		background-color: #f8f9fa;
+
 		border-radius: 5px;
 		box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
 		margin-block-start: 0px;
 		margin-block-end: 10px;
+		flex: 1 0 auto;
 	}
 
 	.menu-bar li {
@@ -207,39 +361,39 @@
 	}
 
 	.modal {
-    display: none; /* Hidden by default */
-    position: fixed; /* Stay in place */
-    z-index: 1; /* Sit on top */
-    left: 0;
-    top: 0;
-    width: 100%; /* Full width */
-    height: 100%; /* Full height */
-    overflow: auto; /* Enable scroll if needed */
-    background-color: rgb(0,0,0); /* Fallback color */
-    background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
-  }
+		display: none; /* Hidden by default */
+		position: fixed; /* Stay in place */
+		z-index: 1; /* Sit on top */
+		left: 0;
+		top: 0;
+		width: 100%; /* Full width */
+		height: 100%; /* Full height */
+		overflow: auto; /* Enable scroll if needed */
+		background-color: rgb(0, 0, 0); /* Fallback color */
+		background-color: rgba(0, 0, 0, 0.4); /* Black w/ opacity */
+	}
 
-  /* Modal Content/Box */
-  .modal-content {
-    background-color: #fefefe;
-    margin: 15% auto; /* 15% from the top and centered */
-    padding: 20px;
-    border: 1px solid #888;
-    width: 80%; /* Could be more or less, depending on screen size */
-  }
+	/* Modal Content/Box */
+	.modal-content {
+		background-color: #fefefe;
+		margin: 15% auto; /* 15% from the top and centered */
+		padding: 20px;
+		border: 1px solid #888;
+		width: 80%; /* Could be more or less, depending on screen size */
+	}
 
-  /* The Close Button */
-  .close {
-    color: #aaa;
-    float: right;
-    font-size: 28px;
-    font-weight: bold;
-  }
+	/* The Close Button */
+	.close {
+		color: #aaa;
+		float: right;
+		font-size: 28px;
+		font-weight: bold;
+	}
 
-  .close:hover,
-  .close:focus {
-    color: black;
-    text-decoration: none;
-    cursor: pointer;
-  }
+	.close:hover,
+	.close:focus {
+		color: black;
+		text-decoration: none;
+		cursor: pointer;
+	}
 </style>

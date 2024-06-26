@@ -137,7 +137,6 @@ const CALL_SPEC = {
     listReceivedByLabel: '',
     listSinceBlock: 'str int',
     listUnspent: 'int int',
-    listWalletDir: '',
     // listWallets: '',
     // loadWallet: 'str',
     lockUnspent: '',
@@ -357,6 +356,15 @@ class RpcClient {
         }, `wallet/${name}`);
     }
 
+    async restoreWallet(newName: string, srcFile: string, load_on_startup: boolean | null = null) {
+        console.log("restoreWallet", newName, srcFile)
+        return await this.rpc({
+            method: 'restorewallet',
+            params: [newName, srcFile, load_on_startup],
+            id: getRandomId()
+        });
+    }
+
     async createWallet(name: string) {
         return await this.rpc({
             method: 'createwallet',
@@ -371,6 +379,26 @@ class RpcClient {
             params: [],
             id: getRandomId()
         }, `wallet/${wallet}`);
+    }
+
+    async listWalletDir(): Promise<string[]> {
+        try {
+            const info = await this.rpc({
+                method: 'listwalletdir',
+                params: [],
+                id: getRandomId()
+            });
+            console.log("listWalletDir info ", info)
+            let wallets = [] as string[];
+            if (info?.wallets instanceof Array) {
+                wallets = info.wallets.map((w: any) => w.name);
+            }
+            console.log("listWalletDir: ", wallets)
+            return wallets
+        } catch (e) {
+            console.log("listWalletDir error:", e)
+            return []
+        }
     }
 
     async getBlockchainInfo() {
@@ -415,7 +443,7 @@ class RpcClient {
         return result.txid;
     }
 
-    async listTransactions( wallet: string, label: string, count: number, skip: number, includeWatchOnly: boolean) {
+    async listTransactions(wallet: string, label: string, count: number, skip: number, includeWatchOnly: boolean) {
         return await this.rpc({
             method: 'listtransactions',
             params: [label, count, skip, includeWatchOnly],

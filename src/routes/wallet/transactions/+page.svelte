@@ -6,14 +6,21 @@
 	import {  listTransactions } from '$lib/wallet-utils';
 	import { onMount } from 'svelte';
 
-	let wallet: string;
-	$: {
-		wallet = $curWalletStore;
-	}
-
 	let pageTxes: ITransaction[] = [];
 	let page = 1;
 	let pageSize = 10; // Adjust this to change the number of transactions per page
+	let wallet: string;
+	$: {
+		wallet = $curWalletStore;
+		if (wallet) {
+			console.log('wallet changed to:', wallet);
+			pageSize = 1;
+			pageSize = 10;
+			fetchPagedTx();
+		}
+	}
+
+	
 
 	async function fetchPagedTx() {
 		try {

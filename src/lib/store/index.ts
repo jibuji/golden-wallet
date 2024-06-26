@@ -1,14 +1,14 @@
 import { listen as gListen } from '@tauri-apps/api/event';
 import type { IBlockchainInfo, IWalletInfo } from '$lib/types';
 import { ensureBitbidIsRunning, sleep } from '$lib/utils';
-import { ensureLoadWallet, getBlockchainInfo, getWalletInfo } from '$lib/wallet-utils';
+import { ensureLoadWallet, getBlockchainInfo, getWalletInfo, listWalletDir } from '$lib/wallet-utils';
 import { derived, writable } from 'svelte/store';
 import { CodeError } from '$lib/error';
 
 // wallet sections
 
 export const errStore = writable(null as CodeError | null);
-export const loadedWalletsStore = writable([]); // list of wallet names
+export const allWalletsStore = writable([] as string[]); // list of wallet names
 // the curWalletStore must be one of the loadedWallets
 export const curWalletStore = writable("default");
 
@@ -21,7 +21,9 @@ export const curWalletInfoStore = derived([curWalletStore, nodeCaughtUpStore], (
     if (!$curWallet || !$nodeCaughtUpStore) {
         return;
     }
-    ensureLoadWallet($curWallet);
+    ensureLoadWallet($curWallet).finally(() => {
+        getWalletInfo($curWallet).then(set);
+    });
     const interval = setInterval(() => {
         getWalletInfo($curWallet).then(set);
     }, 30 * 1000);
@@ -42,12 +44,17 @@ async function nodeLoop() {
             if (count % 10 == 0) {
                 await ensureBitbidIsRunning();
                 await sleep(2000);
+                listWalletDir().then(allWalletsStore.set);
             }
             const bcInfo = (await getBlockchainInfo()) || {} as IBlockchainInfo;
             curBcInfo.set(bcInfo);
             // if we have caught up with the blockchain, we update the wallet info
             if (walletName && !bcInfo.initialblockdownload && bcInfo.headers === bcInfo.blocks) {
                 nodeCaughtUpStore.set(true);
+                // listwallet every 2 minutes
+                if (count % 12 === 0) {
+                    // listWalletDir().then(allWalletsStore.set);
+                }
             } else {
                 nodeCaughtUpStore.set(false);
             }

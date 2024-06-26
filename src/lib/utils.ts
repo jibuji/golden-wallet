@@ -64,9 +64,15 @@ export async function ensureMinerdIsRunning(threads: number, addr: string) {
         const minerDir = await join(appDataDirPath, 'minerd');
         const pid = await getPid(`${minerDir}/minerd.pid`);
         if (pid) {
-            if (await isProcessRunning(pid)) {
-                console.log('minerd is running')
-                return;
+            //if the process not running, 
+            //we try to check it every 5 seconds for 3 times here
+            let attempts = 0;
+            while (attempts++ < 5) {
+                if (await isProcessRunning(pid)) {
+                    console.log('minerd is running')
+                    return;
+                }
+                await sleep(3 * 1000);
             }
         }
         const child = await runMinerd(minerDir, threads, addr);
@@ -79,6 +85,7 @@ export async function ensureMinerdIsRunning(threads: number, addr: string) {
 }
 
 async function killPid(pid: number) {
+    console.log("killPid:", pid)
     const isWindows = (await platform()) === 'win32';
     if (isWindows) {
         //kill windows process
@@ -168,7 +175,7 @@ async function runBitbi(nodeDataDirPath: string) {
             await fs.removeFile(`${nodeDataDirPath}/data/${file.name}`);
         }
     }
-    
+
     //write current time to lastStartTime.txt
     await fs.writeTextFile(`${nodeDataDirPath}/data/lastStartTime.txt`, now.toString());
     const command = Command.sidecar("sidecar/bitbid", [
@@ -211,6 +218,7 @@ async function runMinerd(minerDir: string, threads: number, addr: string) {
         //write data to errLogFile
         fs.writeTextFile(outLogFile, data, { append: true });
     });
+    console.log(`runMinerd start mining on ${addr} with ${threads} threads`);
     return miner;
 }
 

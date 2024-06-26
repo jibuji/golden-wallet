@@ -14,7 +14,16 @@
 	let txLoading = true;
 	let isSending = false;
 	$: wallet = $curWalletStore;
-
+	$: {
+		if (wallet && isCaughtUp) {
+			txLoading = true;
+			listRecentTransactions(wallet, 5, 'send').then(txes => {
+				sentTransactions = txes;
+			}).finally(() => {
+				txLoading = false;
+			});
+		}
+	}
 	$: isCaughtUp = !$curBcInfo.initialblockdownload && $curBcInfo.blocks === $curBcInfo.headers;
 
 	let showModal = false;
@@ -147,7 +156,7 @@
 									>{getShorter(tx.txid)}</a
 								>
 							</td>
-							<td>{tx.comment}</td>
+							<td>{tx.comment || ''}</td>
 							<td>{formatUnixSec(tx.time)}</td>
 						</tr>
 					{/each}

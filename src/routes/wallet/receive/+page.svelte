@@ -23,29 +23,32 @@
 	}
 
 	async function loadAddressesForLabel(wallet: string, label: string) {
+		const labeledAddrs:IAddressInfo[] = [] ;
 		const addrs = (await getAddressesByLabel(wallet, label)) || [];
 		for (const addr of addrs) {
 			if (isAddrLoaded(addr)) {
 				continue;
 			}
 			const addrInfo = await getAddressInfo(wallet, addr);
-			addresses.push(addrInfo);
+			labeledAddrs.push(addrInfo);
 		}
-		// sort addresses by timestamp decending
-		addresses.sort((a, b) => b.timestamp - a.timestamp);
 		//force update
-		addresses = [...addresses];
+		return labeledAddrs;
 	}
 
 	async function loadAddresses(wallet: string) {
 		//1. loadlabels of current wallet
 		//2. load addresses for each label of current wallet
 		//3. get addresses info for each address
-
+		let newAddrs: IAddressInfo[] = [];
 		const labels = await listLabels(wallet);
 		for (const label of labels) {
-			await loadAddressesForLabel(wallet, label);
+			const a = await loadAddressesForLabel(wallet, label);
+			newAddrs = [...newAddrs, ...a];
 		}
+		// sort addresses by timestamp decending
+		newAddrs.sort((a, b) => b.timestamp - a.timestamp);
+		addresses = newAddrs;
 	}
 
 	async function generateAddress() {

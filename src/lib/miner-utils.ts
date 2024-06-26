@@ -1,6 +1,6 @@
-import { derived, type Readable } from "svelte/store";
+import { derived, writable, type Readable } from "svelte/store";
 import { CodeError, ErrorCode } from "./error";
-import { curWalletInfoStore, errStore, nodeCaughtUpStore } from "./store";
+import { curWalletInfoStore, curWalletStore, errStore, nodeCaughtUpStore } from "./store";
 import { ensureMinerdIsRunning, isSidecarRunning, sleep, stopSidecar } from "./utils";
 import { getMinerAddresses } from "./wallet-utils";
 
@@ -104,9 +104,9 @@ class MinerLooper {
     }
 
     public async stopMiner() {
-        if (!this.isSwitchingLoopRunning) {
-            return;
-        }
+        // if (!this.isSwitchingLoopRunning) {
+        //     return;
+        // }
         this.exitLoop = true;
         this.isSwitching = true;
         try {
@@ -142,20 +142,35 @@ class MinerLooper {
     }
 }
 
-const needMine: Readable<string> = derived([nodeCaughtUpStore, curWalletInfoStore], ([$nodeCaughtUp, $curWalletInfoStore], set) => {
-    if (!$nodeCaughtUp || !$curWalletInfoStore?.walletname) {
+export const minerIsSwitchingWalletStore = writable(false);
+const needMine: Readable<string> = derived([nodeCaughtUpStore, curWalletInfoStore, curWalletStore], ([$nodeCaughtUp, $curWalletInfoStore, $curwalletStore], set) => {
+    if (!$nodeCaughtUp || !$curWalletInfoStore?.walletname || !$curwalletStore) {
+        return;
+    }
+    if ($curwalletStore !== $curWalletInfoStore?.walletname) {
+        //wallet is loading
         return;
     }
     set($curWalletInfoStore.walletname);
 });
 
+let isMinerSwitchWallet = false;
 needMine.subscribe((walletName) => {
     if (!isMinerScheduled() || !walletName) {
         return;
     }
+    if (isMinerSwitchWallet) {
+        errStore.set(new CodeError(ErrorCode.MINER_SWITCH_WALLET_FAILED, "Miner is switching wallet, You can't switch wallet now."));
+        return;
+    }
+    isMinerSwitchWallet = true;
+    minerIsSwitchingWalletStore.set(true);
     MinerLooper.switchWallet(walletName).then(looper => {
-        looper.startMiner();
+        return looper.startMiner();
     }).catch(e => {
+    }).finally(() => {
+        isMinerSwitchWallet = false;
+        minerIsSwitchingWalletStore.set(false);
     });
 });
 

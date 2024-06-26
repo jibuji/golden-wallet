@@ -1,6 +1,5 @@
 <script>
 	import { page } from '$app/stores';
-	import '$lib/miner-utils';
 	import { curBcInfo, curWalletInfoStore } from '$lib/store';
 
 	$: isCaughtUp = !$curBcInfo.initialblockdownload && $curBcInfo.blocks === $curBcInfo.headers;

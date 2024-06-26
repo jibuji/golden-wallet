@@ -13,7 +13,7 @@ const gCli = new Client({
 
 export async function listWallets() {
     const info = await gCli.listWallets()
-    console.log("info:", info);
+    console.log("listWallets info:", info);
     return info;
 }
 
@@ -23,6 +23,14 @@ export async function loadWallet(name: string) {
 
 export async function backupWallet(name: string, path: string) {
     return await gCli.backupWallet(name, path);
+}
+
+export async function restoreWallet(name: string, path: string, load_on_startup = true) {
+    return await gCli.restoreWallet(name, path, load_on_startup);
+}
+
+export async function listWalletDir() {
+    return await gCli.listWalletDir();
 }
 
 export async function ensureLoadWallet(name: string) {
