@@ -2,7 +2,7 @@
 	import { sleep } from '$lib/utils';
 	import { onMount } from 'svelte';
 	import { curBcInfo } from '$lib/store';
-	import { fade } from 'svelte/transition';
+	import Modal from '$lib/components/Model.svelte';
 
 	import {
 		getMinerThreads,
@@ -97,7 +97,7 @@
 		</div>
 		<div class="button-group">
 			{#if isReady}
-				<button class="start-mining" on:click={startMining}>Start Mining</button>
+				<button class="start-mining" disabled={popupMessage !== ''} on:click={startMining}>Start Mining</button>
 			{:else}
 				<button class="schedule-mining" on:click={scheduleMining}>Schedule Mining</button>
 			{/if}
@@ -105,16 +105,14 @@
 	{:else}
 		<div class="button-group">
 			{#if isRunning}
-				<button class="stop-mining" on:click={stopMining}>Stop Mining</button>
+				<button class="stop-mining" disabled={popupMessage !== ''} on:click={stopMining}>Stop Mining</button>
 			{:else}
 				<button class="unschedule-mining" on:click={unscheduleMining}>Unschedule Mining</button>
 			{/if}
 		</div>
 	{/if}
 	{#if popupMessage}
-		<div class="popup" transition:fade={{ delay: 500, duration: 1000 }}>
-			{popupMessage}
-		</div>
+		<Modal message={popupMessage} />
 	{/if}
 </div>
 
@@ -209,16 +207,5 @@
 	button.unschedule-mining:hover {
 		background-color: #d32f2f;
 	}
-	.popup {
-		position: fixed;
-		bottom: 20px;
-		left: 50%;
-		transform: translateX(-50%);
-		padding: 10px 20px;
-		background-color: #333;
-		color: #fff;
-		border-radius: 5px;
-		opacity: 0.9;
-		text-align: center;
-	}
+	
 </style>
