@@ -21,11 +21,16 @@ export const curWalletInfoStore = derived([curWalletStore, nodeCaughtUpStore], (
     if (!$curWallet || !$nodeCaughtUpStore) {
         return;
     }
-    ensureLoadWallet($curWallet).finally(() => {
-        getWalletInfo($curWallet).then(set);
+    ensureLoadWallet(walletName).finally(() => {
+        getWalletInfo(walletName).then(set);
     });
     const interval = setInterval(() => {
-        getWalletInfo($curWallet).then(set);
+        getWalletInfo(walletName).then(info => {
+            if (!info) {
+                ensureLoadWallet(walletName);
+            }
+            set(info)
+        });
     }, 30 * 1000);
     return () => clearInterval(interval);
 }, {} as IWalletInfo)

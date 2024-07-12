@@ -45,6 +45,7 @@ export async function ensureLoadWallet(name: string) {
     try {
         //try to create wallet then load it again
         await gCli.createWallet(name);
+        await loadWallet(name);
     } catch (e) {
         console.error('createWallet failed', e);
     }

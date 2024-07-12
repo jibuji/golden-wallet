@@ -261,12 +261,15 @@ class RpcClient {
             console.log(`rpc fetch response`, response)
             const data = response.data;
             console.log(`rpc fetch response.data`, data)
-
+            const reqBody = JSON.stringify(request);
             if (response.status === 401) {
-                throw new Error('Bitcoin JSON-RPC: Connection Rejected: 401 Unnauthorized');
+                throw new Error('Bitcoin JSON-RPC: Connection Rejected: 401 Unnauthorized:' + reqBody);
             }
             if (response.status === 403) {
-                throw new Error('Bitcoin JSON-RPC: Connection Rejected: 403 Forbidden');
+                throw new Error('Bitcoin JSON-RPC: Connection Rejected: 403 Forbidden:' + reqBody);
+            }
+            if (response.status === 404) {
+                throw new Error('Bitcoin JSON-RPC: Connection Rejected: 404 Not Found:' + reqBody);
             }
             if (response.status === 500 && data === 'Work queue depth exceeded') {
                 const exceededError = new Error('Bitcoin JSON-RPC: ' + data);
@@ -274,7 +277,7 @@ class RpcClient {
                 throw exceededError;
             }
             if (response.status === 500 && data.error) {
-                const err = new Error(data.error.message);
+                const err = new Error(data.error.message + ":" + reqBody);
                 err['code'] = data.error.code;
                 throw err;
             }
