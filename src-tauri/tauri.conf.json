@@ -173,7 +173,7 @@
     },
     "bundle": {
       "active": true,
-      "targets": "all",
+      "targets": ["deb", "nsis", "msi", "app", "dmg", "updater"],
       "identifier": "bitbi-golden-wallet",
       "category": "DeveloperTool",
       "copyright": "",
