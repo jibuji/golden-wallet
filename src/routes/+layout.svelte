@@ -26,6 +26,7 @@
 	$: {
 		console.log('all wallets', $allWalletsStore);
 		console.log('cur wallet', $curWalletStore);
+		console.log('curWalletInfoStore', $curWalletInfoStore);
 		err = $errStore;
 	}
 

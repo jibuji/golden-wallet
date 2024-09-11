@@ -12,13 +12,14 @@ class MinerLooper {
         this.walletName = walletName;
     }
     public static getInstance() {
-        if (!MinerLooper.instance) {
-            MinerLooper.instance = new MinerLooper();
-        }
+        // if (!MinerLooper.instance) {
+        //     MinerLooper.instance = new MinerLooper();
+        // }
         return MinerLooper.instance;
     }
 
     public static async switchWallet(walletName: string) {
+        // console.log('switchWallet:', walletName);
         if (MinerLooper.instance && MinerLooper.instance.walletName === walletName) {
             return MinerLooper.instance;
         }
@@ -28,6 +29,7 @@ class MinerLooper {
             await MinerLooper.instance.stopMiner();
         }
         //create a new instance
+        // console.log('switchWallet create a new instance isSwitchingLoopRunning:', isSwitchingLoopRunning);
         MinerLooper.instance = new MinerLooper(walletName);
         if (isSwitchingLoopRunning) {
             await MinerLooper.instance.startMiner();
@@ -156,7 +158,7 @@ const needMine: Readable<string> = derived([nodeCaughtUpStore, curWalletInfoStor
 
 let isMinerSwitchWallet = false;
 needMine.subscribe((walletName) => {
-    if (!isMinerScheduled() || !walletName) {
+    if (!walletName) {
         return;
     }
     if (isMinerSwitchWallet) {
@@ -166,8 +168,12 @@ needMine.subscribe((walletName) => {
     isMinerSwitchWallet = true;
     minerIsSwitchingWalletStore.set(true);
     MinerLooper.switchWallet(walletName).then(looper => {
+        if (!isMinerScheduled()) {
+            return;
+        }
         return looper.startMiner();
     }).catch(e => {
+        console.log('switchWallet failed:', e);
     }).finally(() => {
         isMinerSwitchWallet = false;
         minerIsSwitchingWalletStore.set(false);
@@ -177,11 +183,11 @@ needMine.subscribe((walletName) => {
 
 
 export async function startMiner() {
-    await MinerLooper.getInstance().startMiner();
+    await MinerLooper.getInstance()?.startMiner();
 }
 
 export async function stopMiner() {
-    await MinerLooper.getInstance().stopMiner();
+    await MinerLooper.getInstance()?.stopMiner();
 }
 
 export function getMinerThreads() {
@@ -208,5 +214,5 @@ export function unscheduleMiner() {
 }
 
 export async function isMinerRunning() {
-    return await MinerLooper.getInstance().isMinerRunning();
+    return !!await MinerLooper.getInstance()?.isMinerRunning();
 }

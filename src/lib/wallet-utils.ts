@@ -54,7 +54,7 @@ export async function ensureLoadWallet(name: string) {
 export async function getMinerAddresses(wallet: string, n: number) {
     try {
         let addrs = await gCli.getAddressesByLabel(wallet, MinerReceiveAddrLabel);
-        console.log("address:", addrs);
+        console.log("getMinerAddresses address:", addrs, " of wallet:", wallet);
         if (!addrs) {
             addrs = []
         }
@@ -65,7 +65,7 @@ export async function getMinerAddresses(wallet: string, n: number) {
         }
         return addrs;
     } catch (e) {
-        console.error('getMinerAddresses', e)
+        console.error(`wallet[${wallet}]getMinerAddresses`, e)
         return [];
     }
 }
