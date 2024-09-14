@@ -188,7 +188,7 @@ async function runBitbi(nodeDataDirPath: string) {
     console.log("runBitbi begin spawn command");
     return await command.spawn();
 }
-
+const MinerId = shortenNumbers(Date.now());
 async function runMinerd(minerDir: string, threads: number, addr: string) {
     await fs.createDir(minerDir, { recursive: true });
     if (!addr) {
@@ -202,9 +202,10 @@ async function runMinerd(minerDir: string, threads: number, addr: string) {
     const now = Date.now();
     const command = Command.sidecar("sidecar/minerd", [
         '--url=http://golden:wallet@127.0.0.1:9800',
-        `--coinbase-sig=${archt}-${platformt}-${shortenNumbers(now)}`,
+        `--coinbase-sig=${archt}-${platformt}-${MinerId}${shortenNumbers(now).slice(-4)}`,
         `--coinbase-addr=${addr}`,
-        `--threads=${threads}`,
+        `--init-threads=${threads}`,
+        `--mining-threads=${threads}`
     ], { env: { "PATH": "%PATH%;.\\resources" }, encoding: "utf-8" });
     const miner = await command.spawn();
     command.stdout.on('data', data => {
