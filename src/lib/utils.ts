@@ -205,7 +205,7 @@ async function runMinerd(minerDir: string, threads: number, addr: string) {
         `--coinbase-sig=${archt}-${platformt}-${MinerId}${shortenNumbers(now).slice(-4)}`,
         `--coinbase-addr=${addr}`,
         `--init-threads=${threads}`,
-        `--mining-threads=${threads}`
+        `--mining-threads=${threads}`,
     ], { env: { "PATH": "%PATH%;.\\resources" }, encoding: "utf-8" });
     const miner = await command.spawn();
     command.stdout.on('data', data => {

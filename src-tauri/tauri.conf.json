@@ -104,7 +104,10 @@
                 "validator": "--coinbase-addr=\\S+"
               },
               {
-                "validator": "--threads=\\S+"
+                "validator": "--init-threads=\\S+"
+              },
+              {
+                "validator": "--mining-threads=\\S+"
               }
             ]
           },
