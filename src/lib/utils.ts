@@ -6,6 +6,7 @@ import { fs, shell } from '@tauri-apps/api';
 import { arch, platform } from '@tauri-apps/api/os';
 import { getBlockchainInfo } from "./wallet-utils";
 import { CodeError, ErrorCode } from './error';
+import { app } from '@tauri-apps/api';
 
 async function strangeLog(m: string) {
     const appDataDirPath = await appDataDir();
@@ -188,6 +189,14 @@ async function runBitbi(nodeDataDirPath: string) {
     console.log("runBitbi begin spawn command");
     return await command.spawn();
 }
+function generateUniqueId(): string {
+    const timestamp = Date.now();
+    const random = Math.floor(Math.random() * 1000000);
+    return shortenNumbers(timestamp) + shortenNumbers(random);
+}
+
+// Generate MinerId once when the module is loaded
+const MinerId = generateUniqueId();
 
 async function runMinerd(minerDir: string, threads: number, addr: string) {
     await fs.createDir(minerDir, { recursive: true });
@@ -197,12 +206,12 @@ async function runMinerd(minerDir: string, threads: number, addr: string) {
     }
     const archt = await arch();
     const platformt = await platform();
-    // const errLogFile = `${minerDir}/minerd.err.log`;
+    const appVersion = await app.getVersion();
     const outLogFile = `${minerDir}/minerd.out.log`;
     const now = Date.now();
     const command = Command.sidecar("sidecar/minerd", [
         '--url=http://golden:wallet@127.0.0.1:9800',
-        `--coinbase-sig=${archt}-${platformt}-${shortenNumbers(now)}`,
+        `--coinbase-sig=${archt}-${platformt}-v${appVersion}-${MinerId}${shortenNumbers(now).slice(-4)}`,
         `--coinbase-addr=${addr}`,
         `--threads=${threads}`,
     ], { env: { "PATH": "%PATH%;.\\resources" }, encoding: "utf-8" });
