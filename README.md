@@ -16,3 +16,27 @@ And the best part? Golden Wallet is designed to work seamlessly on both desktop 
 So why wait? Dive in and start exploring the world of BTB coins with Golden Wallet today! 🌟 
 
 Go to check the release page to download the latest version of Golden Wallet here: [Releases](https://github.com/bitbi-core/golden-wallet/releases)
+
+### Building from Source
+
+If you encounter issues running the release binaries on Windows or macOS due to app signature requirements, you can build Golden Wallet from source. Follow these steps:
+
+1. Clone the repository:
+   ```
+   git clone https://github.com/bitbi-core/golden-wallet.git
+   cd golden-wallet
+   ```
+
+2. Install dependencies:
+   ```
+   npm install
+   ```
+
+3. Build the app:
+   ```
+   npm run tauri build
+   ```
+
+This will create an executable for your operating system in the `src-tauri/target/release` directory.
+
+For more detailed instructions on building Tauri apps, please refer to the [Tauri documentation](https://tauri.app/v1/guides/building/).

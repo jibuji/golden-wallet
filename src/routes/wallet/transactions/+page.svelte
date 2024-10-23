@@ -5,6 +5,7 @@
 	import { formatUnixSec, getShorter } from '$lib/utils';
 	import {  listTransactions } from '$lib/wallet-utils';
 	import { onMount } from 'svelte';
+	import uniqBy from 'lodash-es/uniqBy';
 
 	let pageTxes: ITransaction[] = [];
 	let page = 1;
@@ -24,8 +25,11 @@
 
 	async function fetchPagedTx() {
 		try {
-			const tx = await listTransactions(wallet, '*', pageSize, (page - 1) * pageSize);
-			pageTxes = tx.sort((a, b) => b.time - a.time);
+			const tx = await listTransactions(wallet, '*', pageSize*2, (page - 1) * pageSize);
+			// Remove duplicates based on txid using Lodash
+			const uniqueTx = uniqBy(tx, 'txid');
+			// Sort the unique transactions
+			pageTxes = uniqueTx.sort((a: ITransaction, b: ITransaction) => b.time - a.time).slice(0, pageSize);
 		} catch (e) {
 			console.error('fetchPagedTx e:', e);
 		}
