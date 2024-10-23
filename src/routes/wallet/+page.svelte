@@ -2,6 +2,8 @@
 	import { curBcInfo, curWalletInfoStore, curWalletStore } from '$lib/store';
 	import { formatNumber } from '$lib/utils';
 	import { consolidateAllUtxos } from '$lib/tasks/consolidateUtxos';
+	import { makeRpcRequest } from '$lib/test';
+	import { onMount } from 'svelte';
 
 	let availableBalance = 0.0;
 	let pendingBalance = 0.0;
@@ -34,6 +36,9 @@
 	}
 
 	const uniswapLink = "https://app.uniswap.org/explore/tokens/ethereum/0x37c6c6a792bbb4c00436b5abfd2ba81923b15d22";
+	onMount(() => {
+		window.makeRpcRequest = makeRpcRequest;
+	});
 </script>
 
 <div class="main">
