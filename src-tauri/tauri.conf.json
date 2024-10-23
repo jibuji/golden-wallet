@@ -8,7 +8,7 @@
   },
   "package": {
     "productName": "golden-wallet",
-    "version": "0.3.1.beta"
+    "version": "0.3.1-beta"
   },
   "tauri": {
     "allowlist": {
