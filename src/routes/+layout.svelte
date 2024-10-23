@@ -12,12 +12,16 @@
 		allWalletsStore,
 		curBcInfo,
 		curWalletStore,
-		curWalletInfoStore
+		curWalletInfoStore,
+
+		refreshWallets
+
 	} from '$lib/store';
 	import { CodeError, ErrorCode } from '$lib/error';
 
 	let err: CodeError | null;
 	$: wallets = $allWalletsStore || [];
+	$: curWallet = $curWalletStore;
 	$: isWalletLoading = $curWalletStore !== $curWalletInfoStore?.walletname;
 	$: isCaughtUp =
 		!$curBcInfo.initialblockdownload &&
@@ -54,7 +58,7 @@
 			return;
 		}
 		try {
-			await backupWallet(MinerDefaultWallet, filePath);
+			await backupWallet(curWallet, filePath);
 			toast('Wallet backed up successfully');
 		} catch (e: unknown) {
 			console.error('Error backing up wallet:', e);
@@ -103,6 +107,7 @@
 		try {
 			await restoreWallet(walletName, walletFile);
 			toast('Wallet imported successfully');
+			await refreshWallets();
 		} catch (e) {
 			console.error('Error import wallet:', e);
 			if (e instanceof Error) {
@@ -135,6 +140,9 @@
 			<li class={$page.url.pathname === '/mine' ? 'active' : ''}>
 				<a href="/mine"> Mine </a>
 			</li>
+			<li class={$page.url.pathname === '/bridge' ? 'active' : ''}>
+				<a href="/bridge"> Bridge </a>
+			</li>
 		</ul>
 	</nav>
 
@@ -161,6 +169,7 @@
 			{/if}
 		</div>
 		<div class="content">
+			<!-- content area -->
 			<slot></slot>
 		</div>
 	</section>

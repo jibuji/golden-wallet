@@ -1,4 +1,6 @@
 .DS_Store
+script/
+design.md
 node_modules
 /build
 /.svelte-kit
