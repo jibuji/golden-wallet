@@ -4,6 +4,7 @@ import { stringToHex } from "./utils";
 import Web3 from 'web3';
 import {  BRIDGE_SERVER_URL } from "./config";
 import { getWalletIdAndEthAddr } from "./wallet-utils";
+import { ethers } from 'ethers';
 
 export async function createSignedBtbTransaction(walletName: string, toAddress: string, returnEthAddress: string, amountBtb: number) {
     try {
@@ -197,6 +198,97 @@ export async function createSignedEthTransaction(walletName: string, wbtbAmount:
     } catch (error) {
         console.error(`An error occurred: ${error}`);
         return null;
+    }
+}
+
+export async function estimateGasForEthTransfer(
+    fromAddress: string,
+    toAddress: string,
+    amount: bigint
+): Promise<{ gasLimit: bigint; gasPrice: bigint }> {
+    try {
+        const response = await fetch(`${BRIDGE_SERVER_URL}/estimate-eth-transfer`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                from_address: fromAddress,
+                to_address: toAddress,
+                amount: amount.toString()
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to estimate gas');
+        }
+
+        const data = await response.json();
+        return {
+            gasLimit: BigInt(data.gas_limit),
+            gasPrice: BigInt(data.gas_price)
+        };
+    } catch (error) {
+        console.error('Error estimating gas:', error);
+        throw error;
+    }
+}
+
+export async function sendEthTransaction(
+    fromAddress: string,
+    toAddress: string,
+    amount: bigint,
+    privateKey: string
+): Promise<string> {
+    try {
+        // Get gas estimates from backend
+        const gasEstimate = await estimateGasForEthTransfer(fromAddress, toAddress, amount);
+        
+        // Create Web3 instance
+        const web3 = new Web3();
+        
+        // Get the nonce
+        const nonce = await web3.eth.getTransactionCount(fromAddress);
+        
+        // Prepare the transaction
+        const tx = {
+            from: fromAddress,
+            to: toAddress,
+            value: amount.toString(),
+            gas: gasEstimate.gasLimit.toString(),
+            gasPrice: gasEstimate.gasPrice.toString(),
+            nonce: nonce,
+            chainId: await web3.eth.getChainId()
+        };
+
+        // Sign the transaction locally
+        const signedTx = await web3.eth.accounts.signTransaction(tx, privateKey);
+        
+        if (!signedTx.rawTransaction) {
+            throw new Error('Failed to sign transaction');
+        }
+
+        // Send the signed transaction to backend for broadcasting
+        const response = await fetch(`${BRIDGE_SERVER_URL}/broadcast-eth-transaction`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                signed_transaction: signedTx.rawTransaction
+            })
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Failed to broadcast transaction');
+        }
+
+        const result = await response.json();
+        return result.transaction_hash;
+    } catch (error) {
+        console.error('Error sending ETH:', error);
+        throw error;
     }
 }
 

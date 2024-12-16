@@ -5,6 +5,7 @@
 	import { onMount } from 'svelte';
 	import { save, open } from '@tauri-apps/api/dialog';
 	import { goto } from '$app/navigation';
+	import { invoke } from '@tauri-apps/api/tauri';
 
 	import { toast } from '$lib/toast';
 	import {
@@ -73,6 +74,29 @@
 		}
 	}
 
+	let showInputDialog = false;
+	let inputValue = '';
+	let resolveInput: ((value: string | null) => void) | null = null;
+	
+	async function getWalletNameFromUser(): Promise<string | null> {
+		showInputDialog = true;
+		inputValue = '';
+		
+		return new Promise((resolve) => {
+			resolveInput = resolve;
+		});
+	}
+	
+	function handleSubmit() {
+		resolveInput?.(inputValue || null);
+		showInputDialog = false;
+	}
+	
+	function handleCancel() {
+		resolveInput?.(null);
+		showInputDialog = false;
+	}
+	
 	async function importWalletDialog() {
 		// Add your import wallet logic here
 		console.log('Import Wallet clicked');
@@ -97,8 +121,9 @@
 			walletFile = selected;
 		}
 		// Ask the user for the wallet name
-		const walletName = window.prompt('Please enter a new name of the wallet you want to import');
-		if (walletName === null || walletName === '') {
+		const walletName = await getWalletNameFromUser();
+		console.log('walletName:', walletName);
+		if (!walletName) {
 			console.log('No wallet name entered, cancelled');
 			toast('No wallet name entered, cancelled');
 			return;
@@ -192,6 +217,26 @@
 		</div>
 	{/if}
 </main>
+
+{#if showInputDialog}
+	<div class="modal">
+		<div class="modal-content">
+			<h2>Import Wallet</h2>
+			<form on:submit|preventDefault={handleSubmit}>
+				<input
+					type="text"
+					bind:value={inputValue}
+					placeholder="Enter wallet name"
+					autofocus
+				/>
+				<div class="button-group">
+					<button type="submit">OK</button>
+					<button type="button" on:click={handleCancel}>Cancel</button>
+				</div>
+			</form>
+		</div>
+	</div>
+{/if}
 
 <style>
 	main {
@@ -405,5 +450,42 @@
 		color: black;
 		text-decoration: none;
 		cursor: pointer;
+	}
+
+	.modal {
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background: rgba(0, 0, 0, 0.5);
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		z-index: 1000;
+	}
+	
+	.modal-content {
+		background: white;
+		padding: 20px;
+		border-radius: 8px;
+		min-width: 300px;
+	}
+	
+	.modal-content input {
+		width: 100%;
+		padding: 8px;
+		margin: 10px 0;
+	}
+	
+	.button-group {
+		display: flex;
+		justify-content: flex-end;
+		gap: 10px;
+		margin-top: 15px;
+	}
+	
+	.button-group button {
+		padding: 5px 15px;
 	}
 </style>

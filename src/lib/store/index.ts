@@ -35,6 +35,8 @@ export const curWalletInfoStore = derived([curWalletStore, nodeCaughtUpStore], (
     return () => clearInterval(interval);
 }, {} as IWalletInfo)
 
+export const ethBalance = writable<number>(0);
+export const ethGasPrice = writable<bigint>(0n);
 
 // node sections
 

@@ -202,6 +202,17 @@ const CALL_SPEC = {
     walletProcessPSBT: 'str'
 };
 
+interface RPCError extends Error {
+    code?: number;
+}
+
+interface RPCResponse {
+    error?: {
+        message: string;
+        code: number;
+    };
+    result?: any;
+}
 
 class RpcClient {
     static loggers: { [key: string]: Logger } = {
@@ -269,7 +280,7 @@ class RpcClient {
                 body: Body.json(request),
             });
             console.log(`rpc fetch response`, response)
-            const data = response.data;
+            const data = response.data as RPCResponse;
             console.log(`rpc fetch response.data`, data)
             const reqBody = JSON.stringify(request);
             if (response.status === 401) {
@@ -282,22 +293,23 @@ class RpcClient {
                 throw new Error('Bitcoin JSON-RPC: Connection Rejected: 404 Not Found:' + reqBody);
             }
             if (response.status === 500 && data === 'Work queue depth exceeded') {
-                const exceededError = new Error('Bitcoin JSON-RPC: ' + data);
-                exceededError['code'] = 429; // Too many requests
+                const exceededError = new Error('Bitcoin JSON-RPC: ' + data) as RPCError;
+                exceededError.code = 429; // Too many requests
                 throw exceededError;
             }
             if (response.status === 500 && data.error) {
-                const err = new Error(data.error.message + ":" + reqBody);
-                err['code'] = data.error.code;
+                const err = new Error(data.error.message + ":" + reqBody) as RPCError;
+                err.code = data.error.code;
                 throw err;
             }
 
             return data.result;
-        } catch (error: any) {
-            this.log.info(error);
-            this.log.err(error.stack);
-            this.log.err('HTTP Status code:' + error.status);
-            throw new Error('Bitcoin JSON-RPC: Request Error: ' + error.message);
+        } catch (error) {
+            const rpcError = error as RPCError;
+            this.log.info(rpcError.message);
+            this.log.err(rpcError.stack || '');
+            this.log.err('HTTP Status code:' + (rpcError as any).status);
+            throw new Error('Bitcoin JSON-RPC: Request Error: ' + rpcError.message);
         }
     }
     
@@ -327,7 +339,8 @@ class RpcClient {
                 return null;
             }
             return Object.keys(addrs);
-        } catch (e) {
+        } catch (error) {
+            const e = error as RPCError;
             console.log("getAddressesByLabel error:", e.code, "=", e.message);
             return null;
         }
@@ -349,10 +362,10 @@ class RpcClient {
                 id: getRandomId()
             });
             return true;
-        } catch (e) {
+        } catch (error) {
+            const e = error as RPCError;
             console.log("loadWallet error:", e.code, "=", e.message)
             if (e.message.includes("already loaded")) {
-                //This same wallet is already loaded
                 console.log("already-loaded true");
                 return true;
             }
