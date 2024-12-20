@@ -1,6 +1,11 @@
 <script lang="ts">
     import { createEventDispatcher } from 'svelte';
-    const dispatch = createEventDispatcher();
+    
+    interface ModalEvents {
+        close: void;
+    }
+    
+    const dispatch = createEventDispatcher<ModalEvents>();
 
     function close() {
         dispatch('close');

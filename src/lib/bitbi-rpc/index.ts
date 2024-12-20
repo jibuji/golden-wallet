@@ -31,6 +31,14 @@ interface IListUnspentConfig {
     };
 }
 
+export interface ScanProgress {
+    progress: number;  // Progress percentage (0-1)
+    searched_items: number;
+    total_items?: number;
+    elapsed_seconds?: number;
+    remaining_seconds?: number;
+}
+
 const CALL_SPEC = {
     abandonTransaction: 'str',
     abortRescan: '',
@@ -114,7 +122,6 @@ const CALL_SPEC = {
     getRawMemPool: 'bool',
     getRawTransaction: 'str int',
     getReceivedByAccount: 'str int', // deprecated
-    getReceivedByAddress: 'str int',
     getReceivedByLabel: 'str',
     getRpcInfo: '',
     getSpentInfo: 'obj',
@@ -167,7 +174,6 @@ const CALL_SPEC = {
     setHDSeed: '',
     setLabel: 'str str',
     setWalletFlag: 'str',
-    scanTxOutSet: 'str',
     sendFrom: 'str str float int str str',
     sendMany: 'str obj int str',  //not sure this is will work
     // sendRawTransaction: 'str',
@@ -199,10 +205,10 @@ const CALL_SPEC = {
     walletLock: '',
     walletPassPhrase: 'string int',
     walletPassphraseChange: '',
-    walletProcessPSBT: 'str'
+    walletProcessPSBT: 'str',
 };
 
-interface RPCError extends Error {
+export interface RPCError extends Error {
     code?: number;
 }
 
@@ -212,6 +218,12 @@ interface RPCResponse {
         code: number;
     };
     result?: any;
+}
+
+export interface CreateWalletOptions {
+    descriptors?: boolean;
+    private_keys?: boolean;
+    blank?: boolean;
 }
 
 class RpcClient {
@@ -279,7 +291,7 @@ class RpcClient {
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${auth}` },
                 body: Body.json(request),
             });
-            console.log(`rpc fetch response`, response)
+            console.log(`rpc fetch response`, request.method, response)
             const data = response.data as RPCResponse;
             console.log(`rpc fetch response.data`, data)
             const reqBody = JSON.stringify(request);
@@ -391,10 +403,10 @@ class RpcClient {
         });
     }
 
-    async createWallet(name: string) {
+    async createWallet(wallet_name: string, private_keys = true,  blank = false) {
         return await this.rpc({
             method: 'createwallet',
-            params: [name],
+            params: [wallet_name, !private_keys, blank],
             id: getRandomId()
         });
     }
@@ -555,6 +567,42 @@ class RpcClient {
             params: [rawTxHex, maxFeeRate],
             id: getRandomId()
         }, `wallet/${wallet}`);
+    }
+
+    async getReceivedByAddress(wallet: string, address: string, minconf: number = 1): Promise<number> {
+        return await this.rpc({
+            method: 'getreceivedbyaddress',
+            params: [address, minconf],
+            id: getRandomId()
+        }, `wallet/${wallet}`);
+    }
+
+
+    async scantxoutset(wallet: string, action: 'start' | 'status' | 'abort', descriptors?: string[]): Promise<{
+        success?: boolean;
+        progress?: ScanProgress;
+        total_amount?: number;
+        error?: string;
+    }> {
+        try {
+            if (action === 'start' && !descriptors) {
+                throw new Error('Descriptors required for scan start');
+            }
+
+            const params: any[] = [action];
+            if (descriptors) {
+                params.push(descriptors);
+            }
+
+            return await this.rpc({
+                method: 'scantxoutset',
+                params,
+                id: getRandomId()
+            }, `wallet/${wallet}`);
+        } catch (error) {
+            console.error('scantxoutset error:', error);
+            return { error: (error as Error).message };
+        }
     }
 }
 

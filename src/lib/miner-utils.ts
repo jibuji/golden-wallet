@@ -2,7 +2,7 @@ import { derived, writable, type Readable } from "svelte/store";
 import { CodeError, ErrorCode } from "./error";
 import { curWalletInfoStore, curWalletStore, errStore, nodeCaughtUpStore } from "./store";
 import { ensureMinerdIsRunning, isSidecarRunning, sleep, stopSidecar } from "./utils";
-import { getMinerAddresses } from "./wallet-utils";
+import { getMinerAddresses, getNewMinerAddress } from "./wallet-utils";
 
 
 class MinerLooper {
@@ -51,6 +51,8 @@ class MinerLooper {
         // check exitLoop every 6 seconds and switch miner address every 60 minutes
         this.exitLoop = false;
         let count = 0;
+        let currentMinerAddress: string | null = null;
+        
         for (; !this.exitLoop; count++, await sleep(6 * 1000)) {
             let assumeMinerIsRunning = true;
             //check if minerd is running every 10*6 seconds
@@ -61,23 +63,27 @@ class MinerLooper {
             if (count % 1200 !== 0 && assumeMinerIsRunning) {
                 continue;
             }
+            
             this.isSwitching = true;
             try {
                 await stopSidecar('minerd').catch(e => {
                     console.error('needMine stopSidecar minerd failed:', e);
                 });
-                const N = 20;
-                const addresses = await getMinerAddresses(this.walletName, N);
-                if (!addresses.length) {
+
+                // Get a new unused address
+                const newAddress = await getNewMinerAddress(this.walletName);
+                if (!newAddress) {
                     throw new CodeError(
                         ErrorCode.GET_MINER_ADDRESSES_FAILED,
-                        `Failed to get miner addresses from wallet ${this.walletName}`
+                        `Failed to get new miner address from wallet ${this.walletName}`
                     );
                 }
-                //randomly get an addr from addresses
-                const curAddrPos = Math.floor(Math.random() * addresses.length);
+
+                // Only update if we got a new address
+                currentMinerAddress = newAddress;
                 const threads = getMinerThreads();
-                await ensureMinerdIsRunning(threads, addresses[curAddrPos]);
+                await ensureMinerdIsRunning(threads, currentMinerAddress);
+                
             } catch (e) {
                 console.log('error switching miner address');
                 console.error(e);
@@ -106,9 +112,6 @@ class MinerLooper {
     }
 
     public async stopMiner() {
-        // if (!this.isSwitchingLoopRunning) {
-        //     return;
-        // }
         this.exitLoop = true;
         this.isSwitching = true;
         try {

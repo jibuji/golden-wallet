@@ -1,12 +1,10 @@
 import { gRpcClient } from "./bitbi-rpc/index";
-import type { IListUnspentResponse } from "./types";
+import type { IListUnspentResponse } from "./types/index";
 import { stringToHex } from "./utils";
 import Web3 from 'web3';
-import {  BRIDGE_SERVER_URL } from "./config";
-import { getWalletIdAndEthAddr } from "./wallet-utils";
-import { ethers } from 'ethers';
+import {  BRIDGE_SERVER_URL, DEFAULT_WALLET_NAME } from "./config";
 
-export async function createSignedBtbTransaction(walletName: string, toAddress: string, returnEthAddress: string, amountBtb: number) {
+export async function createSignedBtbTransaction(walletId: string, toAddress: string, returnEthAddress: string, amountBtb: number) {
     try {
         // Convert BTB to satoshis (1 BTB = 100,000,000 satoshis)
         const amountSatoshis = BigInt(Math.round(amountBtb * 100_000_000));
@@ -15,7 +13,7 @@ export async function createSignedBtbTransaction(walletName: string, toAddress: 
         // Get and sort unspent transactions
         let unspent;
         try {
-            unspent = await gRpcClient.listUnspent(walletName, {
+            unspent = await gRpcClient.listUnspent(DEFAULT_WALLET_NAME, {
                 minconf: 6,
                 maxconf: 99999999,
                 addresses: [],
@@ -54,9 +52,8 @@ export async function createSignedBtbTransaction(walletName: string, toAddress: 
         const dustThresholdSatoshis = BigInt(10_1000);
 
         // Get change address
-        const changeAddress = await gRpcClient.getRawChangeAddress(walletName, "bech32");
+        const changeAddress = await gRpcClient.getRawChangeAddress(DEFAULT_WALLET_NAME, "bech32");
         console.log("changeAddress:", changeAddress)
-        const {walletId} = await getWalletIdAndEthAddr(walletName);
         
         // Add OP_RETURN data
         const opReturnData = `wrp:${walletId}-${returnEthAddress.startsWith('0x') ? returnEthAddress.slice(2) : returnEthAddress}`;
@@ -81,14 +78,10 @@ export async function createSignedBtbTransaction(walletName: string, toAddress: 
         // Add OP_RETURN output
         outputs.push({data: stringToHex(opReturnData)});
 
-        console.log(`Wallet Name: ${walletName}`);
-        // console.log(`Inputs:`, inputs);
-        // console.log(`Outputs:`, outputs);
-
         // Create and sign raw transaction
         let rawTx;
         try {
-            rawTx = await gRpcClient.createRawTransaction(walletName, inputs, outputs);
+            rawTx = await gRpcClient.createRawTransaction(DEFAULT_WALLET_NAME, inputs, outputs);
             // console.log("Raw Transaction:", rawTx);
         } catch (error) {
             console.error("Error creating raw transaction:", error);
@@ -96,7 +89,7 @@ export async function createSignedBtbTransaction(walletName: string, toAddress: 
         }
         let signedTx;
         try {
-            signedTx = await gRpcClient.signRawTransactionWithWallet(walletName, rawTx);
+            signedTx = await gRpcClient.signRawTransactionWithWallet(DEFAULT_WALLET_NAME, rawTx);
             // console.log("Signed Transaction:", JSON.stringify(signedTx, null, 2));
         } catch (error) {
             console.error("Error signing raw transaction:", error);
@@ -136,7 +129,7 @@ async function getUnwrapEthTransactionCount(address: string): Promise<{final_non
 }
 
 
-export async function createSignedEthTransaction(walletName: string, wbtbAmount: number, btbReceivingAddress: string, privateKey: string, 
+export async function createSignedEthTransaction(walletId: string, wbtbAmount: number, btbReceivingAddress: string, privateKey: string, 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     contractAbi: any, contractAddress: string, gasPriceWei?: string, gasLimit?: number) {
     try {
@@ -160,7 +153,6 @@ export async function createSignedEthTransaction(walletName: string, wbtbAmount:
 
         const satoshis = BigInt(Math.round(wbtbAmount * 100000000)); // 1 BTB = 100,000,000 satoshis
         console.log("satoshis:", satoshis.toString());
-        const {walletId} = await getWalletIdAndEthAddr(walletName);
         // Prepare the custom data
         const customData = web3.utils.asciiToHex(`unw:${walletId}-${btbReceivingAddress}`);
         console.log("custom_data:", customData);

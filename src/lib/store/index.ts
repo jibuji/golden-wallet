@@ -4,13 +4,14 @@ import { ensureBitbidIsRunning, sleep } from '$lib/utils';
 import { ensureLoadWallet, getBlockchainInfo, getWalletInfo, listWalletDir } from '$lib/wallet-utils';
 import { derived, writable } from 'svelte/store';
 import { CodeError } from '$lib/error';
+import { DEFAULT_WALLET_NAME } from '$lib/config';
 
 // wallet sections
 
 export const errStore = writable(null as CodeError | null);
 export const allWalletsStore = writable([] as string[]); // list of wallet names
 // the curWalletStore must be one of the loadedWallets
-export const curWalletStore = writable("default");
+export const curWalletStore = writable(DEFAULT_WALLET_NAME);
 
 export const nodeCaughtUpStore = writable(false);
 
