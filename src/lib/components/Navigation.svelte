@@ -4,7 +4,8 @@
     const navItems = [
         { path: '/wallet', icon: '💰', label: 'Wallet' },
         { path: '/bridge', icon: '🔗', label: 'Bridge' },
-        { path: '/mine', icon: '⛏️', label: 'Mine' }
+        { path: '/mine', icon: '⛏️', label: 'Mine' },
+        { path: '/apps', icon: '📱', label: 'Apps' }
     ];
 
     $: currentPath = $page.url.pathname;

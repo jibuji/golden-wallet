@@ -22,6 +22,7 @@
 			WALLET: '/wallet',
 			BRIDGE: '/bridge',
 			MINE: '/mine',
+			APPS: '/apps',
 			HOME: '/'
 		}
 	};
@@ -31,7 +32,8 @@
 		ROUTES.SETUP.PASSWORD,
 		ROUTES.SETUP.MNEMONIC,
 		ROUTES.AUTH.LOGIN,
-		ROUTES.AUTH.RESTORE
+		ROUTES.AUTH.RESTORE,
+		ROUTES.APP.APPS
 	];
 
 	let isLoading = true;
@@ -73,8 +75,8 @@
 
 		// Case 4: Initialized and unlocked
 		if (initialized && !locked) {
-			// Redirect from public routes to wallet
-			if (isPublicRoute || path === ROUTES.APP.HOME) {
+			// Redirect from public routes to wallet, except for the apps page
+			if ((isPublicRoute && path !== ROUTES.APP.APPS) || path === ROUTES.APP.HOME) {
 				goto(ROUTES.APP.WALLET);
 			}
 			return;
@@ -96,7 +98,8 @@
 
 	// Add a function to check if we should show navigation
 	function shouldShowNavigation(path: string): boolean {
-		return !PUBLIC_ROUTES.includes(path) && !isLoading;
+		// Show navigation if not loading and either not a public route or is the apps page
+		return (!PUBLIC_ROUTES.includes(path) || path === ROUTES.APP.APPS) && !isLoading;
 	}
 
 	// Track route changes for transitions

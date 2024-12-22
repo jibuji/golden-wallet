@@ -159,6 +159,32 @@
       },
       "path": {
         "all": true
+      },
+      "window": {
+        "all": true,
+        "create": true,
+        "center": true,
+        "requestUserAttention": true,
+        "setResizable": true,
+        "setTitle": true,
+        "maximize": true,
+        "unmaximize": true,
+        "minimize": true,
+        "unminimize": true,
+        "show": true,
+        "hide": true,
+        "close": true,
+        "setDecorations": true,
+        "setAlwaysOnTop": true,
+        "setSize": true,
+        "setMinSize": true,
+        "setMaxSize": true,
+        "setPosition": true,
+        "setFullscreen": true,
+        "setFocus": true,
+        "setIcon": true,
+        "setSkipTaskbar": true,
+        "startDragging": true
       }
     },
     "windows": [
@@ -166,12 +192,13 @@
         "fullscreen": false,
         "height": 800,
         "resizable": true,
-        "title": "golden-wallet",
-        "width": 1200
+        "title": "Golden Wallet",
+        "width": 1200,
+        "label": "main-window"
       }
     ],
     "security": {
-      "csp": "default-src blob: data: filesystem: ws: http: https: 'unsafe-eval' 'unsafe-inline' 'self' tauri:; connect-src http://localhost:9800 http://localhost:8848 http://bridge.bitbi.org:8848 tauri://localhost;"
+      "csp": "default-src blob: data: filesystem: ws: http: https: 'unsafe-eval' 'unsafe-inline' 'self' tauri:; connect-src http://localhost:9800 http://localhost:8848 http://bridge.bitbi.org:8848 tauri://localhost; style-src 'self' 'unsafe-inline'"
     },
     "bundle": {
       "active": true,
@@ -193,6 +220,10 @@
         "icons/icon.icns",
         "icons/icon.ico"
       ],
+      "resources": [
+        "resources/*",
+        "../static/apps/**/*"
+      ],
       "longDescription": "",
       "macOS": {
         "entitlements": null,
@@ -201,9 +232,6 @@
         "providerShortName": null,
         "signingIdentity": null
       },
-      "resources": [
-        "resources/*"
-      ],
       "shortDescription": "",
       "windows": {
         "certificateThumbprint": null,
