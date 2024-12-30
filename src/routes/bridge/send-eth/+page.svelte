@@ -3,10 +3,10 @@
     import { ethBalance, ethGasPrice, curWalletStore } from '$lib/store';
     import { formatEther, parseEther } from 'ethers';
     import { estimateGasForEthTransfer, sendEthTransaction } from '$lib/bridge-utils';
-    import { getWalletIdAndEthAddr, getWalletEthPrvKey } from '$lib/wallet-utils';
     import ClosableModal from '$lib/components/ClosableModel.svelte';
 	import { BRIDGE_SERVER_URL } from '$lib/config';
     import { goto } from '$app/navigation';
+    import { ethAddress, ethPrivateKey } from '$lib/stores/wallet-store';
     
     let amount = '';
     let recipient = '';
@@ -14,35 +14,38 @@
     let error = '';
     let isLoading = false;
     let showSuccessModal = false;
-    let transactionHash = '';
+    let transactionHash: string | null = '';
     let walletEthAddress = '';
-    let updateInterval: NodeJS.Timer;
+    let updateInterval: number;
 
     function handleBack() {
         goto('/bridge');
     }
 
     onMount(async () => {
-        if ($curWalletStore) {
-            const walletInfo = await getWalletIdAndEthAddr($curWalletStore);
-            walletEthAddress = walletInfo.ethAddr;
+        if ($curWalletStore && $ethAddress) {
+            walletEthAddress = $ethAddress;
             // Fetch initial balances and gas price
             await updateEthInfo();
             
             // Set up interval to update every 60 seconds
-            updateInterval = setInterval(updateEthInfo, 60000);
+            updateInterval = window.setInterval(updateEthInfo, 60000);
         }
     });
 
     onDestroy(() => {
         // Clean up interval when component is destroyed
         if (updateInterval) {
-            clearInterval(updateInterval);
+            window.clearInterval(updateInterval);
         }
     });
 
     async function updateEthInfo() {
         try {
+            if (!walletEthAddress) {
+                console.error('No ETH address available');
+                return;
+            }
             const { gasPrice } = await estimateGasForEthTransfer(walletEthAddress, "0x0000000000000000000000000000000000000000", 0n);
             console.log("gasPrice:", gasPrice);
             ethGasPrice.set(gasPrice);
@@ -95,9 +98,8 @@
                 return;
             }
 
-            const privateKey = await getWalletEthPrvKey($curWalletStore);
-            if (!privateKey) {
-                error = 'Failed to get ETH private key';
+            if (!$ethPrivateKey) {
+                error = 'ETH private key not available';
                 return;
             }
 
@@ -105,13 +107,17 @@
                 walletEthAddress,
                 recipient,
                 amountWei,
-                privateKey
+                $ethPrivateKey
             );
 
-            showSuccessModal = true;
-            amount = '';
-            recipient = '';
-            await updateEthInfo(); // Update balances after successful send
+            if (transactionHash) {
+                showSuccessModal = true;
+                amount = '';
+                recipient = '';
+                await updateEthInfo(); // Update balances after successful send
+            } else {
+                error = 'Failed to send ETH - no transaction hash returned';
+            }
             
         } catch (err: any) {
             console.error('Send error:', err);
@@ -123,6 +129,7 @@
 
     function closeSuccessModal() {
         showSuccessModal = false;
+        transactionHash = null;
         updateEthInfo(); // Update ETH info after closing modal
     }
 </script>
@@ -189,7 +196,7 @@
         <button
             class="send-button"
             on:click={handleSend}
-            disabled={isLoading || !amount || !recipient || error}
+            disabled={isLoading || !amount || !recipient || !!error}
         >
             {#if isLoading}
                 <span class="loading-spinner"></span>
@@ -207,16 +214,18 @@
             <div class="success-icon">✓</div>
             <h2>Transaction Sent Successfully</h2>
             <p>Your ETH has been sent successfully.</p>
-            <p class="hash-container">
-                Transaction Hash: <br/>
-                <a 
-                    href={`https://etherscan.io/tx/${transactionHash}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                >
-                    {transactionHash}
-                </a>
-            </p>
+            {#if transactionHash}
+                <p class="hash-container">
+                    Transaction Hash: <br/>
+                    <a 
+                        href={`https://etherscan.io/tx/${transactionHash}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    >
+                        {transactionHash}
+                    </a>
+                </p>
+            {/if}
             <button class="close-button" on:click={closeSuccessModal}>
                 Close
             </button>

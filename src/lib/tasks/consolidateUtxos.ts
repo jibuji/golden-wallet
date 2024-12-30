@@ -18,7 +18,7 @@ function loadState(): ConsolidationState | null {
     return data ? JSON.parse(data) : null;
 }
 
-export async function consolidateAllUtxos(walletName: string, maxInputsPerTx: number = 900): Promise<number> {
+export async function consolidateAllUtxos(walletName: string, maxInputsPerTx: number = 200): Promise<number> {
     const state: ConsolidationState =  {
         walletName,
         maxInputsPerTx,

@@ -1,13 +1,14 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import { curWalletStore } from '$lib/store';
-	import { getAddressesByLabel, getNewAddress, getWalletEthPrvKey, getWalletIdAndEthAddr } from '$lib/wallet-utils';
-	import type { ITransaction, IUnwrapTransaction, IWrapTransaction } from '$lib/types';
+	import { getAddressesByLabel, getNewAddress } from '$lib/wallet-utils';
+	import type { ITransaction, IUnwrapTransaction, IWrapTransaction } from '$lib/types/index';
 	import { createSignedEthTransaction, createSignedBtbTransaction } from '$lib/bridge-utils';
 	import { BRIDGE_SERVER_URL } from '$lib/config';
 	import ClosableModal from '$lib/components/ClosableModel.svelte';
 	import { goto } from '$app/navigation';
 	import CopyButton from '$lib/components/CopyButton.svelte';
+	import { walletId, ethAddress, ethPrivateKey } from '$lib/stores/wallet-store';
 
 
 	let currentWallet: string;
@@ -18,7 +19,7 @@
 	let wrapFee: { btb_fee: number; eth_fee_in_wbtb: number } = { btb_fee: 0, eth_fee_in_wbtb: 0 };
 	let unwrapFee: { btb_fee: number; eth_fee: number, eth_gas_price: string, eth_gas_limit: number } = { btb_fee: 0, eth_fee: 0, eth_gas_price: '0', eth_gas_limit: 0 };
     let min_wrap_amount: number = 0;
-    let max_wrap_amount: number = 0;  // Add this line
+    let max_wrap_amount: number = 0;
     let bridge_btb_address: string = '';
     let wbtb_contract_address: string = '';
     let wbtb_contract_abi: any[] = [];
@@ -26,7 +27,7 @@
 	let unwrapHistory: IUnwrapTransaction[] = [];
 	let feeUpdateInterval: ReturnType<typeof setInterval>;
 	let historyUpdateInterval: ReturnType<typeof setInterval>;
-	let balanceUpdateInterval: ReturnType<typeof setInterval>;  // Add this line
+	let balanceUpdateInterval: ReturnType<typeof setInterval>;
 	let minUnwrapAmount: number = 0;
 	let walletEthAddress: string = '';
 	let walletEthBalance: number = 0;
@@ -41,6 +42,7 @@
 		if (currentWallet) {
 			loadBTBAddress();
 		}
+		console.log("ethAddress:", $ethAddress)
 	}
 
 	async function loadBTBAddress() {
@@ -50,9 +52,7 @@
 		} else {
 			btbReceivingAddress = await getNewAddress(currentWallet, 'bridge', 'bech32')
 		}
-		const walletInfo = await getWalletIdAndEthAddr(currentWallet);
-		console.log("loadBTBAddress walletInfo:", walletInfo);
-		walletEthAddress = walletInfo.ethAddr || '';
+		walletEthAddress = $ethAddress || '';
 	}
 	interface WrapFee {
 		btb_fee: number;
@@ -60,10 +60,10 @@
 	}
 
 	interface UnwrapFee {
-		btb_fee: number;
-		eth_fee: number;
-		eth_gas_price: string;
-		eth_gas_limit: number;
+			btb_fee: number;
+			eth_fee: number;
+			eth_gas_price: string;
+			eth_gas_limit: number;
 	}
 
 	interface BridgeInfo {
@@ -71,7 +71,7 @@
 		wrap_fee: WrapFee;
 		unwrap_fee: UnwrapFee;
         min_wrap_amount: number;
-        max_wrap_amount: number;  // Add this line
+        max_wrap_amount: number;
         min_unwrap_amount: number;
         bridge_btb_address: string;
         wbtb_contract_address: string;
@@ -149,11 +149,11 @@
 		fetchBridgeInfo();
 		fetchBridgeHistory();
 		if (walletEthAddress) {
-			fetchEthBalance();  // Add this line
+			fetchEthBalance();
 		}
 		feeUpdateInterval = setInterval(fetchBridgeInfo, 60000);
 		historyUpdateInterval = setInterval(fetchBridgeHistory, 60000);
-		balanceUpdateInterval = setInterval(() => {  // Add this block
+		balanceUpdateInterval = setInterval(() => {
 			if (walletEthAddress) {
 				fetchEthBalance();
 			}
@@ -161,56 +161,65 @@
 	}
 
 	async function fetchBridgeHistory() {
-        const { walletId } = await getWalletIdAndEthAddr(currentWallet);
-        const wrapResponse = await fetch(`${BRIDGE_SERVER_URL}/wrap-history/${walletId}`);
+        if (!$walletId) {
+            console.error('No wallet ID available');
+            return;
+        }
+        const wrapResponse = await fetch(`${BRIDGE_SERVER_URL}/wrap-history/${$walletId}`);
         wrapHistory = await wrapResponse.json();
-		wrapHistory.sort((a: IWrapTransaction, b: IWrapTransaction) => b.create_time > a.create_time ? 1 : -1);	
+        wrapHistory.sort((a: IWrapTransaction, b: IWrapTransaction) => b.create_time > a.create_time ? 1 : -1);	
         
-		const unwrapResponse = await fetch(`${BRIDGE_SERVER_URL}/unwrap-history/${walletId}`);
+        const unwrapResponse = await fetch(`${BRIDGE_SERVER_URL}/unwrap-history/${$walletId}`);
         unwrapHistory = await unwrapResponse.json();
-		unwrapHistory.sort((a: IUnwrapTransaction, b: IUnwrapTransaction) => b.create_time > a.create_time ? 1 : -1);	
+        unwrapHistory.sort((a: IUnwrapTransaction, b: IUnwrapTransaction) => b.create_time > a.create_time ? 1 : -1);	
 	}
 
 	async function initiateBridge() {
 		isLoading = true;
 		try {
 			if (direction === 'btb_to_wbtb') {
-				const signedBtbTransaction = await createSignedBtbTransaction(currentWallet, bridge_btb_address, ethReceivingAddress, amount);
-				if (signedBtbTransaction) {
+				if (!$walletId) {
+					throw new Error('Wallet ID not available');
+				}
+				const result = await createSignedBtbTransaction($walletId, bridge_btb_address, ethReceivingAddress, amount);
+				if (result.error) {
+					errorMessage = result.error;
+					showErrorModal = true;
+					return;
+				}
+				if (result.hex) {
 					const response = await fetch(`${BRIDGE_SERVER_URL}/initiate-wrap/`, {
 						method: 'POST',
 						headers: {
 							'Content-Type': 'application/json'
 						},
 						body: JSON.stringify({
-							signed_btb_tx: signedBtbTransaction
+							signed_btb_tx: result.hex
 						})
 					});
-					const result = await response.json();
+					const responseData = await response.json();
 					if (response.status !== 200) {
-						if (result.detail && result.detail.includes("Error broadcasting transaction: -26: tx-size")) {
+						if (responseData.detail && responseData.detail.includes("Error broadcasting transaction: -26: tx-size")) {
 							errorMessage = "The transaction size is too large. Please try reducing the amount you're attempting to wrap.";
 						} else {
-							errorMessage = result.detail || 'An error occurred while initiating the wrap. Please try again.';
+							errorMessage = responseData.detail || 'An error occurred while initiating the wrap. Please try again.';
 						}
 						showErrorModal = true;
 					} else {
-						console.log('Wrap initiated:', result);
+						console.log('Wrap initiated:', responseData);
 						// Optionally, show a success message to the user
 					}
-				} else {
-					errorMessage = 'Failed to create signed BTB transaction. Please try again.';
-					showErrorModal = true;
 				}
 			} else {
 				// Implement WBTB to BTB unwrapping logic
-                const privateKey = await getWalletEthPrvKey(currentWallet);
-				if (!privateKey) {
-					console.error("privateKey not found")
-					throw new Error("generate eth private key error")
+				if (!$ethPrivateKey) {
+					throw new Error('ETH private key not available');
 				}
-                const signedEthTransaction = await createSignedEthTransaction(currentWallet, amount, btbReceivingAddress, 
-					privateKey, wbtb_contract_abi, wbtb_contract_address, unwrapFee.eth_gas_price, unwrapFee.eth_gas_limit);
+				if (!$walletId) {
+					throw new Error('Wallet ID not available');
+				}
+				const signedEthTransaction = await createSignedEthTransaction($walletId, amount, btbReceivingAddress, 
+					$ethPrivateKey, wbtb_contract_abi, wbtb_contract_address, unwrapFee.eth_gas_price, unwrapFee.eth_gas_limit);
 
 				const response = await fetch(`${BRIDGE_SERVER_URL}/initiate-unwrap`, {
 					method: 'POST',
@@ -218,16 +227,16 @@
 						'Content-Type': 'application/json'
 					},
 					body: JSON.stringify({
-                        signed_eth_tx: signedEthTransaction
+						signed_eth_tx: signedEthTransaction
 					})
 				});
 				const result = await response.json();
 				console.log('Unwrap initiated:', result);
 			}
 			fetchBridgeHistory();
-		} catch (error) {
+		} catch (error: unknown) {
 			console.error('Error during bridge initiation:', error);
-			errorMessage = error.message || 'An unexpected error occurred during bridge initiation. Please try again.';
+			errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred during bridge initiation. Please try again.';
 			showErrorModal = true;
 		} finally {
 			isLoading = false;
@@ -254,7 +263,7 @@
 		if (historyUpdateInterval) {
 			clearInterval(historyUpdateInterval);
 		}
-		if (balanceUpdateInterval) {  // Add this block
+		if (balanceUpdateInterval) {
 			clearInterval(balanceUpdateInterval);
 		}
 	});

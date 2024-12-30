@@ -1,12 +1,10 @@
 import { gRpcClient } from "./bitbi-rpc/index";
-import type { IListUnspentResponse } from "./types";
+import type { IListUnspentResponse } from "./types/index";
 import { stringToHex } from "./utils";
 import Web3 from 'web3';
-import {  BRIDGE_SERVER_URL } from "./config";
-import { getWalletIdAndEthAddr } from "./wallet-utils";
-import { ethers } from 'ethers';
+import {  BRIDGE_SERVER_URL, DEFAULT_WALLET_NAME } from "./config";
 
-export async function createSignedBtbTransaction(walletName: string, toAddress: string, returnEthAddress: string, amountBtb: number) {
+export async function createSignedBtbTransaction(walletId: string, toAddress: string, returnEthAddress: string, amountBtb: number) {
     try {
         // Convert BTB to satoshis (1 BTB = 100,000,000 satoshis)
         const amountSatoshis = BigInt(Math.round(amountBtb * 100_000_000));
@@ -15,7 +13,7 @@ export async function createSignedBtbTransaction(walletName: string, toAddress: 
         // Get and sort unspent transactions
         let unspent;
         try {
-            unspent = await gRpcClient.listUnspent(walletName, {
+            unspent = await gRpcClient.listUnspent(DEFAULT_WALLET_NAME, {
                 minconf: 6,
                 maxconf: 99999999,
                 addresses: [],
@@ -27,10 +25,12 @@ export async function createSignedBtbTransaction(walletName: string, toAddress: 
                     include_immature_coinbase: false
                 }
             });
-            // console.log("Unspent transactions:", JSON.stringify(unspent, null, 2));
+            if (!unspent || unspent.length === 0) {
+                return { error: 'No UTXOs found with minimum 6 confirmations and minimum amount of 0.01 BTB' };
+            }
         } catch (error) {
             console.error("Error fetching unspent transactions:", error);
-            throw error;
+            return { error: `Failed to fetch unspent transactions: ${error instanceof Error ? error.message : String(error)}` };
         }
         unspent.sort((a: IListUnspentResponse, b: IListUnspentResponse) => b.amount - a.amount);
 
@@ -46,21 +46,25 @@ export async function createSignedBtbTransaction(walletName: string, toAddress: 
 
         // Check for insufficient funds
         if (totalSatoshis < amountSatoshis + feeSatoshis) {
-            console.log(`Insufficient funds. Available: ${totalSatoshis}, Required: ${amountSatoshis + feeSatoshis}`);
-            return null;
+            const availableBTB = Number(totalSatoshis) / 100_000_000;
+            const requiredBTB = Number(amountSatoshis + feeSatoshis) / 100_000_000;
+            return { error: `Insufficient confirmed funds. Available: ${availableBTB} BTB, Required: ${requiredBTB} BTB (including 0.001 BTB fee)` };
         }
 
         // Define dust threshold (e.g., 0.00001 BTB or 1000 satoshis)
         const dustThresholdSatoshis = BigInt(10_1000);
 
         // Get change address
-        const changeAddress = await gRpcClient.getRawChangeAddress(walletName, "bech32");
-        console.log("changeAddress:", changeAddress)
-        const {walletId} = await getWalletIdAndEthAddr(walletName);
+        let changeAddress;
+        try {
+            changeAddress = await gRpcClient.getRawChangeAddress(DEFAULT_WALLET_NAME, "bech32");
+        } catch (error) {
+            console.error("Error getting change address:", error);
+            return { error: `Failed to get change address: ${error instanceof Error ? error.message : String(error)}` };
+        }
         
         // Add OP_RETURN data
         const opReturnData = `wrp:${walletId}-${returnEthAddress.startsWith('0x') ? returnEthAddress.slice(2) : returnEthAddress}`;
-        console.log("opReturnData:", opReturnData);
         
         // Calculate change amount
         const changeAmount = totalSatoshis - amountSatoshis - feeSatoshis;
@@ -75,42 +79,36 @@ export async function createSignedBtbTransaction(walletName: string, toAddress: 
             outputs.push({[changeAddress]: Number(changeAmount) / 100_000_000});
         } else {
             console.log(`Change amount (${changeAmount} satoshis) is below dust threshold. Adding to fee.`);
-            // The dust amount is implicitly added to the fee by not including it in the outputs
         }
 
         // Add OP_RETURN output
         outputs.push({data: stringToHex(opReturnData)});
 
-        console.log(`Wallet Name: ${walletName}`);
-        // console.log(`Inputs:`, inputs);
-        // console.log(`Outputs:`, outputs);
-
         // Create and sign raw transaction
         let rawTx;
         try {
-            rawTx = await gRpcClient.createRawTransaction(walletName, inputs, outputs);
-            // console.log("Raw Transaction:", rawTx);
+            rawTx = await gRpcClient.createRawTransaction(DEFAULT_WALLET_NAME, inputs, outputs);
         } catch (error) {
             console.error("Error creating raw transaction:", error);
-            throw error;
+            return { error: `Failed to create raw transaction: ${error instanceof Error ? error.message : String(error)}` };
         }
+
         let signedTx;
         try {
-            signedTx = await gRpcClient.signRawTransactionWithWallet(walletName, rawTx);
-            // console.log("Signed Transaction:", JSON.stringify(signedTx, null, 2));
+            signedTx = await gRpcClient.signRawTransactionWithWallet(DEFAULT_WALLET_NAME, rawTx);
         } catch (error) {
             console.error("Error signing raw transaction:", error);
-            throw error;
+            return { error: `Failed to sign transaction: ${error instanceof Error ? error.message : String(error)}` };
         }
+
         if (signedTx.complete) {
-            return signedTx.hex;
+            return { hex: signedTx.hex };
         } else {
-            console.log("Failed to sign the transaction");
-            return null;
+            return { error: 'Transaction signing incomplete. Some inputs may be missing or invalid.' };
         }
     } catch (error) {
-        console.error(`An error occurred in createSignedBtbTransaction: ${error}`);
-        return null;
+        console.error(`An error occurred in createSignedBtbTransaction:`, error);
+        return { error: `Unexpected error: ${error instanceof Error ? error.message : String(error)}` };
     }
 }
 
@@ -136,7 +134,7 @@ async function getUnwrapEthTransactionCount(address: string): Promise<{final_non
 }
 
 
-export async function createSignedEthTransaction(walletName: string, wbtbAmount: number, btbReceivingAddress: string, privateKey: string, 
+export async function createSignedEthTransaction(walletId: string, wbtbAmount: number, btbReceivingAddress: string, privateKey: string, 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     contractAbi: any, contractAddress: string, gasPriceWei?: string, gasLimit?: number) {
     try {
@@ -160,7 +158,6 @@ export async function createSignedEthTransaction(walletName: string, wbtbAmount:
 
         const satoshis = BigInt(Math.round(wbtbAmount * 100000000)); // 1 BTB = 100,000,000 satoshis
         console.log("satoshis:", satoshis.toString());
-        const {walletId} = await getWalletIdAndEthAddr(walletName);
         // Prepare the custom data
         const customData = web3.utils.asciiToHex(`unw:${walletId}-${btbReceivingAddress}`);
         console.log("custom_data:", customData);
