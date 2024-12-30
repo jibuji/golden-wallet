@@ -3,6 +3,7 @@ import type { IListUnspentResponse } from "./types/index";
 import { stringToHex } from "./utils";
 import Web3 from 'web3';
 import {  BRIDGE_SERVER_URL, DEFAULT_WALLET_NAME } from "./config";
+import { hexToBytes } from "ethereum-cryptography/utils";
 
 export async function createSignedBtbTransaction(walletId: string, toAddress: string, returnEthAddress: string, amountBtb: number) {
     try {
@@ -138,9 +139,11 @@ export async function createSignedEthTransaction(walletId: string, wbtbAmount: n
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     contractAbi: any, contractAddress: string, gasPriceWei?: string, gasLimit?: number) {
     try {
+        //convert private to uint8array
         const web3 = new Web3();
         console.log("gasPricewei:", gasPriceWei)
         console.log("privateKey:", privateKey)
+        
         const account = web3.eth.accounts.privateKeyToAccount(privateKey);
 
         const senderAddress = account.address;
@@ -150,8 +153,7 @@ export async function createSignedEthTransaction(walletId: string, wbtbAmount: n
         console.log("Chain ID:", chainId);
 
         if (nonce === null || chainId === null) {
-            console.error("Failed to get transaction count from server. Aborting transaction.");
-            return null;
+            return { error: "Failed to get transaction count from server. Please try again." };
         }
 
         console.log("nonce:", nonce);
@@ -168,14 +170,16 @@ export async function createSignedEthTransaction(walletId: string, wbtbAmount: n
         // Prepare the burn function call
         const burnFunction = wbtbContract.methods.burn(satoshis, customData);
 
-        // Convert MaxGasPrice to Wei if it's not already
-
         // Convert provided gas price from Gwei to Wei, or use MaxGasPriceWei
         const providedGasPriceWei = gasPriceWei ? BigInt(gasPriceWei) : MaxGasPriceWei;
         const finalGasPriceWei = (providedGasPriceWei < MaxGasPriceWei ? providedGasPriceWei : MaxGasPriceWei);
         
         console.log("gas_price (Wei):", finalGasPriceWei.toString());
         console.log("gas_price (Gwei):", (finalGasPriceWei / BigInt(10**9)).toString());
+
+        if (!gasLimit) {
+            return { error: "Gas limit is required but not provided" };
+        }
 
         // Prepare transaction data
         const transaction = {
@@ -188,13 +192,19 @@ export async function createSignedEthTransaction(walletId: string, wbtbAmount: n
             chainId: chainId
         };
         console.log("sendingtransaction:", transaction);
+        
         // Sign the transaction
         const signedTx = await web3.eth.accounts.signTransaction(transaction, privateKey);
         console.log("signedTx:", signedTx);
-        return signedTx.rawTransaction;
+        
+        if (!signedTx.rawTransaction) {
+            return { error: "Failed to sign transaction" };
+        }
+        
+        return { rawTransaction: signedTx.rawTransaction };
     } catch (error) {
         console.error(`An error occurred: ${error}`);
-        return null;
+        return { error: error instanceof Error ? error.message : String(error) };
     }
 }
 

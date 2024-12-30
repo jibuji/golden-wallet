@@ -221,13 +221,19 @@
 				const signedEthTransaction = await createSignedEthTransaction($walletId, amount, btbReceivingAddress, 
 					$ethPrivateKey, wbtb_contract_abi, wbtb_contract_address, unwrapFee.eth_gas_price, unwrapFee.eth_gas_limit);
 
+				if (!signedEthTransaction || signedEthTransaction.error) {
+					errorMessage = signedEthTransaction?.error || 'Failed to create signed transaction';
+					showErrorModal = true;
+					return;
+				}
+
 				const response = await fetch(`${BRIDGE_SERVER_URL}/initiate-unwrap`, {
 					method: 'POST',
 					headers: {
 						'Content-Type': 'application/json'
 					},
 					body: JSON.stringify({
-						signed_eth_tx: signedEthTransaction
+						signed_eth_tx: signedEthTransaction.rawTransaction
 					})
 				});
 				const result = await response.json();
