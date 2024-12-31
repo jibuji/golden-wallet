@@ -18,14 +18,14 @@
 	let receivedAmount: number = 0;
 	let fromNetwork: 'Bitbi' | 'Ethereum' = 'Bitbi';
 	let toNetwork: 'Bitbi' | 'Ethereum' = 'Ethereum';
-	let direction: 'btb_to_wbtb' | 'wbtb_to_btb' = 'btb_to_wbtb';
-	let wrapFee: { btb_fee: number; eth_fee_in_wbtb: number } = { btb_fee: 0, eth_fee_in_wbtb: 0 };
+	let direction: 'btb_to_ebtb' | 'ebtb_to_btb' = 'btb_to_ebtb';
+	let wrapFee: { btb_fee: number; eth_fee_in_ebtb: number } = { btb_fee: 0, eth_fee_in_ebtb: 0 };
 	let unwrapFee: { btb_fee: number; eth_fee: number, eth_gas_price: string, eth_gas_limit: number } = { btb_fee: 0, eth_fee: 0, eth_gas_price: '0', eth_gas_limit: 0 };
 	let min_wrap_amount: number = 0;
 	let max_wrap_amount: number = 0;
 	let bridge_btb_address: string = '';
-	let wbtb_contract_address: string = '';
-	let wbtb_contract_abi: any[] = [];
+	let ebtb_contract_address: string = '';
+	let ebtb_contract_abi: any[] = [];
 	let wrapHistory: IWrapTransaction[] = [];
 	let unwrapHistory: IUnwrapTransaction[] = [];
 	let feeUpdateInterval: ReturnType<typeof setInterval>;
@@ -43,19 +43,21 @@
 	let successMessage = '';
 	let showAddressInfo = false;
 	let showBridgeInfo = false;
+	let showDetailsModal = false;
+	let selectedTransaction: IWrapTransaction | IUnwrapTransaction | null = null;
 
 	function swapDirection() {
 		[fromNetwork, toNetwork] = [toNetwork, fromNetwork];
-		direction = fromNetwork === 'Bitbi' ? 'btb_to_wbtb' : 'wbtb_to_btb';
+		direction = fromNetwork === 'Bitbi' ? 'btb_to_ebtb' : 'ebtb_to_btb';
 	}
 
 	$: {
-		direction = fromNetwork === 'Bitbi' ? 'btb_to_wbtb' : 'wbtb_to_btb';
+		direction = fromNetwork === 'Bitbi' ? 'btb_to_ebtb' : 'ebtb_to_btb';
 		// Calculate received amount accounting for fees
-		if (direction === 'btb_to_wbtb') {
-			receivedAmount = Math.max(0, amount - wrapFee.btb_fee - wrapFee.eth_fee_in_wbtb);
+		if (direction === 'btb_to_ebtb') {
+			receivedAmount = amount > 0 ? Math.max(0, amount - wrapFee.btb_fee - wrapFee.eth_fee_in_ebtb) : 0;
 		} else {
-			receivedAmount = Math.max(0, amount - unwrapFee.btb_fee);
+			receivedAmount = amount > 0 ? Math.max(0, amount - unwrapFee.btb_fee) : 0;
 		}
 	}
 
@@ -93,7 +95,7 @@
 
 	interface WrapFee {
 		btb_fee: number;
-		eth_fee_in_wbtb: number;
+		eth_fee_in_ebtb: number;
 	}
 
 	interface UnwrapFee {
@@ -104,14 +106,14 @@
 	}
 
 	interface BridgeInfo {
-		wbtb_contract_abi: any[];
+		ebtb_contract_abi: any[];
 		wrap_fee: WrapFee;
 		unwrap_fee: UnwrapFee;
         min_wrap_amount: number;
         max_wrap_amount: number;
         min_unwrap_amount: number;
         bridge_btb_address: string;
-        wbtb_contract_address: string;
+        ebtb_contract_address: string;
 	}
 
 	async function fetchBridgeInfo() {
@@ -123,10 +125,10 @@
 			}
 
 			const data: BridgeInfo = await response.json();
-            if (data.wbtb_contract_abi && JSON.stringify(data.wbtb_contract_abi) !== JSON.stringify(wbtb_contract_abi)) {
-                wbtb_contract_abi = data.wbtb_contract_abi;
+            if (data.ebtb_contract_abi && JSON.stringify(data.ebtb_contract_abi) !== JSON.stringify(ebtb_contract_abi)) {
+                ebtb_contract_abi = data.ebtb_contract_abi;
             }
-            if (data.wrap_fee && (data.wrap_fee.btb_fee !== wrapFee.btb_fee || data.wrap_fee.eth_fee_in_wbtb !== wrapFee.eth_fee_in_wbtb)) {
+            if (data.wrap_fee && (data.wrap_fee.btb_fee !== wrapFee.btb_fee || data.wrap_fee.eth_fee_in_ebtb !== wrapFee.eth_fee_in_ebtb)) {
                 wrapFee = data.wrap_fee;
             }
             if (data.unwrap_fee && (data.unwrap_fee.btb_fee !== unwrapFee.btb_fee || data.unwrap_fee.eth_fee !== unwrapFee.eth_fee || data.unwrap_fee.eth_gas_price !== unwrapFee.eth_gas_price || data.unwrap_fee.eth_gas_limit !== unwrapFee.eth_gas_limit)) {
@@ -141,8 +143,8 @@
             if (data.bridge_btb_address && data.bridge_btb_address !== bridge_btb_address) {
                 bridge_btb_address = data.bridge_btb_address;
             }
-            if (data.wbtb_contract_address && data.wbtb_contract_address !== wbtb_contract_address) {
-                wbtb_contract_address = data.wbtb_contract_address;
+            if (data.ebtb_contract_address && data.ebtb_contract_address !== ebtb_contract_address) {
+                ebtb_contract_address = data.ebtb_contract_address;
             }
             if (data.min_unwrap_amount && data.min_unwrap_amount !== minUnwrapAmount) {
                 minUnwrapAmount = data.min_unwrap_amount;
@@ -169,7 +171,7 @@
 			const data = await response.json();
 			console.log("fetchEthBalance data:", data);
 			walletEthBalance = data.eth_balance || 0;
-			walletWbtbBalance = data.wbtb_balance || 0;
+			walletWbtbBalance = data.ebtb_balance || 0;
 
 		} catch (error) {
 			console.error('Error fetching ETH and BTB balances:', error);
@@ -177,7 +179,7 @@
 	}
 
 	$: {
-		if (direction === 'wbtb_to_btb' && walletEthAddress) {
+		if (direction === 'ebtb_to_btb' && walletEthAddress) {
 			fetchEthBalance();
 		}
 	}
@@ -214,7 +216,7 @@
 	async function initiateBridge() {
 		isLoading = true;
 		try {
-			if (direction === 'btb_to_wbtb') {
+			if (direction === 'btb_to_ebtb') {
 				if (!$walletId) {
 					throw new Error('Wallet ID not available');
 				}
@@ -249,7 +251,7 @@
 					}
 				}
 			} else {
-				// Implement WBTB to BTB unwrapping logic
+				// Implement BTB unwrapping logic
 				if (!$ethPrivateKey) {
 					throw new Error('ETH private key not available');
 				}
@@ -257,7 +259,7 @@
 					throw new Error('Wallet ID not available');
 				}
 				const signedEthTransaction = await createSignedEthTransaction($walletId, amount, btbReceivingAddress, 
-					$ethPrivateKey, wbtb_contract_abi, wbtb_contract_address, unwrapFee.eth_gas_price, unwrapFee.eth_gas_limit);
+					$ethPrivateKey, ebtb_contract_abi, ebtb_contract_address, unwrapFee.eth_gas_price, unwrapFee.eth_gas_limit);
 
 				if (!signedEthTransaction || signedEthTransaction.error) {
 					errorMessage = signedEthTransaction?.error || 'Failed to create signed transaction';
@@ -306,13 +308,13 @@
 		}
 		
 		// Progress statuses for wrap
-		if (['WRAP_BTB_TRANSACTION_BROADCASTED', 'WRAP_BTB_TRANSACTION_CONFIRMING', 'WBTB_MINTING_IN_PROGRESS'].includes(status)) {
+		if (['WRAP_BTB_TRANSACTION_BROADCASTED', 'WRAP_BTB_TRANSACTION_CONFIRMING', 'EBTB_MINTING_IN_PROGRESS'].includes(status)) {
 			return 'status-progress';
 		}
 		
 		// Progress statuses for unwrap
 		if (['UNWRAP_ETH_TRANSACTION_INITIATED', 'UNWRAP_ETH_TRANSACTION_CONFIRMING', 
-			'UNWRAP_ETH_TRANSACTION_CONFIRMED', 'WBTB_BURN_CONFIRMED',
+			'UNWRAP_ETH_TRANSACTION_CONFIRMED', 'EBTB_BURN_CONFIRMED',
 			'UNWRAP_BTB_TRANSACTION_CREATING', 'UNWRAP_BTB_TRANSACTION_BROADCASTED'].includes(status)) {
 			return 'status-progress';
 		}
@@ -327,11 +329,25 @@
 		return '';
 	}
 
+	function getFriendlyStatus(status: string): string {
+		const style = getStatusStyle(status);
+		switch(style) {
+			case 'status-completed':
+				return 'Completed';
+			case 'status-progress':
+				return 'Progressing';
+			case 'status-error':
+				return 'Error';
+			default:
+				return status;
+		}
+	}
+
 	onMount(() => {
 		startPeriodicUpdates();
 		if (walletEthAddress) {
 			console.log("onMount fetchEthBalance direction:", direction, walletEthAddress);
-			fetchEthBalance();
+				fetchEthBalance();
 		}
 	});
 
@@ -353,6 +369,16 @@
 
 	function handleSendEth() {
 		goto('/bridge/send-eth');
+	}
+
+	function openDetailsModal(transaction: IWrapTransaction | IUnwrapTransaction) {
+		selectedTransaction = transaction;
+		showDetailsModal = true;
+	}
+
+	function closeDetailsModal() {
+		showDetailsModal = false;
+		selectedTransaction = null;
 	}
 </script>
 
@@ -402,7 +428,7 @@
 			</div>
 
 			{#if showBridgeInfo}
-				{#if direction === 'btb_to_wbtb'}
+				{#if direction === 'btb_to_ebtb'}
 					<div class="bridge-info" transition:slide>
 						<h3>Bridge BTB from Bitbi to Ethereum</h3>
 						<p>To bridge your BTB tokens to Ethereum:</p>
@@ -436,17 +462,22 @@
 							<input 
 								type="number" 
 								bind:value={amount}
-								min={direction === 'btb_to_wbtb' ? min_wrap_amount : 0}
-								max={direction === 'btb_to_wbtb' ? max_wrap_amount : walletWbtbBalance}
+								min={direction === 'btb_to_ebtb' ? min_wrap_amount : 0}
+								max={direction === 'btb_to_ebtb' ? max_wrap_amount : walletWbtbBalance}
 								step="0.00000001"
 								placeholder="0.00000000"
 							/>
 							<span class="token-symbol">BTB</span>
 						</div>
-						{#if direction === 'btb_to_wbtb'}
+						{#if direction === 'btb_to_ebtb'}
 							<div class="available-amount">
 								Available: {walletBtbBalance.toFixed(8)} BTB
 							</div>
+							{#if amount < min_wrap_amount}
+								<div class="warning-text">
+									Minimum bridge amount is {min_wrap_amount} BTB
+								</div>
+							{/if}
 						{:else}
 							<div class="available-amounts">
 								<div>Available: {walletWbtbBalance.toFixed(6)} BTB</div>
@@ -460,67 +491,64 @@
 
 					<div class="amount-input">
 						<label>You receive (estimated)</label>
-						<div class="amount-field">
+						<div class="amount-field receive-field">
 							<input 
 								type="number" 
 								value={receivedAmount}
 								disabled
-								placeholder="0.00000000"
+								placeholder="0.000000"
 							/>
-							<span class="token-symbol">BTB</span>
+							<div class="token-label">: BTB</div>
 						</div>
 					</div>
 				</div>
 
-				{#if direction === 'btb_to_wbtb'}
+				{#if direction === 'btb_to_ebtb'}
 					<div class="fee-info">
-						Network fee: {wrapFee.btb_fee + wrapFee.eth_fee_in_wbtb} BTB
+						Network fee: {wrapFee.btb_fee + wrapFee.eth_fee_in_ebtb} BTB
 					</div>
 				{/if}
 			</div>
 
-			{#if direction === 'btb_to_wbtb'}
+			{#if direction === 'btb_to_ebtb'}
 				<div class="address-input">
 					<label>BTB Receiving Address on Ethereum</label>
-					<input 
-						type="text" 
-						bind:value={ethReceivingAddress}
-						placeholder="Enter your Ethereum address"
-						class="eth-address-input"
-					/>
+					<div class="address-field">
+						<input 
+							type="text" 
+							bind:value={ethReceivingAddress}
+							placeholder="Enter your Ethereum address"
+							class="eth-address-input"
+						/>
+					</div>
 				</div>
 			{:else if showAddressInfo}
 				<div class="address-info" class:show={showAddressInfo} transition:slide>
 					<div class="address-info-content">
-						<div class="address-section">
-							<label>Wallet's ETH Address:</label>
+						<label>Wallet's ETH Address:</label>
+						<div class="address-row">
 							<div class="address-display-container">
-								<code class="address-display">{walletEthAddress}</code>
+								{walletEthAddress}
 								<CopyButton text={walletEthAddress} />
 							</div>
-						</div>
-						<div class="send-eth-button">
-							<button class="secondary-button" on:click={handleSendEth}>
+							<button class="secondary-button send-eth-button" on:click={() => goto('/bridge/send-eth')}>
 								Send ETH Out
 							</button>
 						</div>
 					</div>
 				</div>
 			{/if}
-			{#if direction === 'wbtb_to_btb'}
+			{#if direction === 'ebtb_to_btb'}
 				<div class="fee-info">
 						Network fee: {unwrapFee.btb_fee} BTB + {unwrapFee.eth_fee} ETH
 				</div>
 			{/if}
-			{#if direction === 'btb_to_wbtb' && ethReceivingAddress.trim() === ''}
+			{#if direction === 'btb_to_ebtb' && ethReceivingAddress.trim() === ''}
 				<p class="error-message">Ethereum address is required</p>
 			{/if}
 
-			{#if direction === 'btb_to_wbtb' && amount < min_wrap_amount}
-				<p class="error-message">Minimum wrap amount is {min_wrap_amount} BTB</p>
-			{/if}
-			{#if direction === 'btb_to_wbtb' && amount > max_wrap_amount}
-				<p class="error-message">Maximum wrap amount is {max_wrap_amount} BTB</p>
+			{#if direction === 'btb_to_ebtb' && amount > max_wrap_amount}
+				<p class="error-message">Maximum bridge amount is {max_wrap_amount} BTB</p>
 			{/if}
 
 			<button 
@@ -528,8 +556,8 @@
 				on:click={initiateBridge} 
 				disabled={
 					isLoading ||
-					(direction === 'btb_to_wbtb' && (ethReceivingAddress.trim() === '' || amount < min_wrap_amount || amount > max_wrap_amount)) ||
-					(direction === 'wbtb_to_btb' && (amount < minUnwrapAmount || amount > walletWbtbBalance || walletEthBalance < unwrapFee.eth_fee))
+					(direction === 'btb_to_ebtb' && (ethReceivingAddress.trim() === '' || amount < min_wrap_amount || amount > max_wrap_amount)) ||
+					(direction === 'ebtb_to_btb' && (amount < minUnwrapAmount || amount > walletWbtbBalance || walletEthBalance < unwrapFee.eth_fee))
 				}
 			>
 				{#if isLoading}
@@ -543,7 +571,7 @@
 	</div>
 
 	<div class="card mt-6">
-		<h2>{direction === 'btb_to_wbtb' ? 'Wrap' : 'Unwrap'} History</h2>
+		<h2>{direction === 'btb_to_ebtb' ? 'Wrap' : 'Unwrap'} History</h2>
 		<table>
 			<thead>
 				<tr>
@@ -554,36 +582,15 @@
 				</tr>
 			</thead>
 			<tbody>
-				{#each (direction === 'btb_to_wbtb' ? wrapHistory : unwrapHistory) as transaction}
+				{#each (direction === 'btb_to_ebtb' ? wrapHistory : unwrapHistory) as transaction}
 					<tr>
 						<td>{new Date(transaction.create_time).toLocaleString()}</td>
-						<td>{transaction.amount} {direction === 'btb_to_wbtb' ? 'BTB' : 'WBTB'}</td>
-						<td class={getStatusStyle(transaction.status)}>{transaction.status}</td>
+						<td>{transaction.amount} {direction === 'btb_to_ebtb' ? 'BTB' : 'eBTB'}</td>
+						<td class={getStatusStyle(transaction.status)}>{getFriendlyStatus(transaction.status)}</td>
 						<td>
-							<details>
-								<summary>View Details</summary>
-								{#if isWrapTransaction(transaction)}
-									<p>BTB Transaction ID: {transaction.btb_tx_id}</p>
-									{#if transaction.eth_tx_hash}
-										<p>ETH Transaction Hash: {transaction.eth_tx_hash}</p>
-									{/if}
-									<p>Receiving Address: {transaction.receiving_address}</p>
-									{#if transaction.minted_wbtb_amount !== null}
-										<p>Minted WBTB: {transaction.minted_wbtb_amount}</p>
-									{/if}
-								{:else}
-									<p>ETH Transaction Hash: {transaction.eth_tx_hash}</p>
-									{#if transaction.btb_tx_id}
-										<p>BTB Transaction ID: {transaction.btb_tx_id}</p>
-									{/if}
-									<p>Receiving Address: {transaction.btb_receiving_address}</p>
-								{/if}
-								{#if transaction.exception_count > 0}
-									<p>Exceptions: {transaction.exception_count}</p>
-									<p>Last Exception: {transaction.last_exception_time ? new Date(transaction.last_exception_time).toLocaleString() : 'N/A'}</p>
-									<p>Exception Details: {transaction.exception_details}</p>
-								{/if}
-							</details>
+							<button class="view-details-button" on:click={() => openDetailsModal(transaction)}>
+									View Details
+							</button>
 						</td>
 					</tr>
 				{/each}
@@ -608,13 +615,89 @@
 			<button on:click={closeSuccessModal}>Close</button>
 		</div>
 	{/if}
+
+	{#if showDetailsModal && selectedTransaction}
+		<div class="modal-overlay" on:click={closeDetailsModal}></div>
+		<div class="details-modal" 
+			on:click|stopPropagation 
+			on:keydown={(e) => e.key === 'Escape' && closeDetailsModal()}
+			tabindex="0"
+			role="dialog"
+			aria-modal="true"
+		>
+			<div class="details-modal-header">
+				<h3>Transaction Details</h3>
+				<button class="close-button" on:click={closeDetailsModal}>&times;</button>
+			</div>
+			<div class="details-modal-content">
+				{#if isWrapTransaction(selectedTransaction)}
+					<div class="detail-item">
+						<span class="detail-label">BTB Transaction ID:</span>
+						<span class="detail-value">
+							<a  target="_blank" rel="noopener noreferrer" href="https://explorer.bitbi.org/tx/{selectedTransaction.btb_tx_id}">
+								{selectedTransaction.btb_tx_id}
+							</a>
+						</span>
+					</div>
+					{#if selectedTransaction.eth_tx_hash}
+						<div class="detail-item">
+							<span class="detail-label">ETH Transaction Hash:</span>
+							<span class="detail-value">{selectedTransaction.eth_tx_hash}</span>
+						</div>
+					{/if}
+					<div class="detail-item">
+						<span class="detail-label">Receiving Address:</span>
+						<span class="detail-value">{selectedTransaction.receiving_address}</span>
+					</div>
+					{#if selectedTransaction.minted_ebtb_amount !== null}
+						<div class="detail-item">
+							<span class="detail-label">Minted BTB:</span>
+							<span class="detail-value">{selectedTransaction.minted_ebtb_amount}</span>
+						</div>
+					{/if}
+				{:else}
+					<div class="detail-item">
+						<span class="detail-label">ETH Transaction Hash:</span>
+						<span class="detail-value">{selectedTransaction.eth_tx_hash}</span>
+					</div>
+					{#if selectedTransaction.btb_tx_id}
+						<div class="detail-item">
+							<span class="detail-label">BTB Transaction ID:</span>
+							<span class="detail-value">{selectedTransaction.btb_tx_id}</span>
+						</div>
+					{/if}
+					<div class="detail-item">
+						<span class="detail-label">Receiving Address:</span>
+						<span class="detail-value">{selectedTransaction.btb_receiving_address}</span>
+					</div>
+				{/if}
+				{#if selectedTransaction.exception_count > 0}
+					<div class="detail-item error">
+						<span class="detail-label">Exceptions:</span>
+						<span class="detail-value">{selectedTransaction.exception_count}</span>
+					</div>
+					<div class="detail-item error">
+						<span class="detail-label">Last Exception:</span>
+						<span class="detail-value">
+							{selectedTransaction.last_exception_time ? new Date(selectedTransaction.last_exception_time).toLocaleString() : 'N/A'}
+						</span>
+					</div>
+					<div class="detail-item error">
+						<span class="detail-label">Exception Details:</span>
+						<span class="detail-value">{selectedTransaction.exception_details}</span>
+					</div>
+				{/if}
+			</div>
+		</div>
+	{/if}
 </div>
 
 <style>
 	.container {
-		max-width: 800px;
+		max-width: 1000px;
 		margin: 0 auto;
 		padding: 20px;
+		width: 100%;
 	}
 
 	.page-title {
@@ -622,13 +705,15 @@
 		font-weight: bold;
 		margin-bottom: 24px;
 		color: #333;
+		padding: 0 12px;
 	}
 
 	.card {
 		background: white;
 		border-radius: 12px;
-		padding: 24px;
+		padding: 32px;
 		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+		width: 100%;
 	}
 
 	.mt-6 {
@@ -636,6 +721,7 @@
 	}
 
 	.bridge-form {
+		width: 100%;
 		display: flex;
 		flex-direction: column;
 		gap: 1px;
@@ -703,8 +789,10 @@
 	}
 
 	.amount-inputs-row {
-		display: flex;
+		display: grid;
+		grid-template-columns: 1fr 1fr;
 		gap: 16px;
+		align-items: start;
 	}
 
 	.amount-input {
@@ -712,6 +800,7 @@
 		background: #f8f9fa;
 		padding: 16px;
 		border-radius: 12px;
+		min-width: 0;
 	}
 
 	.amount-field {
@@ -719,6 +808,10 @@
 		align-items: center;
 		gap: 8px;
 		margin-top: 8px;
+		background: #f8f9fa;
+		padding: 8px 12px;
+		border-radius: 8px;
+		width: 100%;
 	}
 
 	.amount-field input {
@@ -727,6 +820,8 @@
 		border: none;
 		font-size: 24px;
 		padding: 8px 0;
+		width: 100%;
+		min-width: 0;
 	}
 
 	.amount-field input:focus {
@@ -760,7 +855,24 @@
 	}
 
 	.address-input {
-		margin-top: 16px;
+		margin-top: 24px;
+		margin-bottom: 24px;
+		background: #f8f9fa;
+		padding: 16px;
+		border-radius: 12px;
+	}
+
+	.address-input label {
+		display: block;
+		font-size: 14px;
+		color: #666;
+		margin-bottom: 8px;
+	}
+
+	.address-field {
+		background: white;
+		border-radius: 8px;
+		padding: 4px;
 	}
 
 	.eth-address-input {
@@ -768,14 +880,19 @@
 		padding: 12px;
 		border: 1px solid #ddd;
 		border-radius: 8px;
-		font-size: 16px;
+		font-size: 14px;
 		font-family: monospace;
+		background: white;
 	}
 
 	.eth-address-input:focus {
 		outline: none;
 		border-color: #4a90e2;
 		box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
+	}
+
+	.eth-address-input::placeholder {
+		color: #999;
 	}
 
 	.error-message {
@@ -1025,35 +1142,47 @@
 
 	.address-info-content {
 		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 16px;
+		flex-direction: column;
+		gap: 8px;
 	}
 
-	.address-section {
-		flex: 1;
-	}
-
-	.address-section label {
-		font-size: 14px;
-		color: #666;
-		margin-bottom: 4px;
-		display: block;
-	}
-
-	.address-display-container {
+	.address-row {
 		display: flex;
 		align-items: center;
 		gap: 8px;
+		width: 100%;
+	}
+
+	.address-display-container {
+		flex: 1;
+		display: flex;
+		align-items: center;
+		gap: 4px;
 		background: white;
 		padding: 8px;
 		border-radius: 6px;
 		height: 38px;
+		font-family: monospace;
+		font-size: 13px;
 	}
 
 	.send-eth-button {
-		display: flex;
+		white-space: nowrap;
+		height: 38px;
+		padding: 0 12px;
+		font-size: 14px;
+		display: inline-flex;
 		align-items: center;
+		justify-content: center;
+	}
+
+	.secondary-button {
+		background: #6c757d;
+		color: white;
+		border: none;
+		border-radius: 6px;
+		cursor: pointer;
+		transition: background-color 0.2s;
 	}
 
 	.bridge-info-toggle {
@@ -1074,9 +1203,9 @@
 
 	.bridge-info {
 		background: #f0f7ff;
-		padding: 10px;
+		padding: 16px 20px;
 		border-radius: 12px;
-		margin: 8px 0;
+		margin: 16px 0;
 		border: 1px solid #bae0ff;
 	}
 
@@ -1086,37 +1215,50 @@
 
 	.bridge-info h3 {
 		color: #1890ff;
-		margin: 0 0 8px 0;
+		margin: 0 0 12px 0;
 		font-size: 16px;
+		font-weight: 600;
 	}
 
 	.bridge-info p {
-		margin: 0 0 8px 0;
+		margin: 0 0 12px 0;
 		color: #333;
 		font-size: 14px;
+		line-height: 1.5;
+		padding-left: 0;
 	}
 
 	.bridge-info ol {
-		margin: 0 0 8px 0;
-		padding-left: 20px;
+		margin: 0 0 16px 0;
+		padding-left: 35px;
+		list-style-position: outside;
 	}
 
 	.bridge-info li {
-		margin-bottom: 4px;
+		margin-bottom: 8px;
 		color: #333;
 		font-size: 14px;
+		line-height: 1.5;
+		padding-left: 8px;
+		margin-left: 0;
+	}
+
+	.bridge-info li::marker {
+		color: #1890ff;
+		font-weight: 500;
 	}
 
 	.bridge-info .note {
 		font-style: italic;
 		color: #666;
-		margin: 0;
+		margin: 12px 0 0 0;
 		font-size: 13px;
+		line-height: 1.4;
 	}
 
 	.bridge-info-toggle {
 		text-align: right;
-		margin-bottom: 4px;
+		margin: 0 0 8px 0;
 	}
 
 	.available-amounts {
@@ -1140,6 +1282,160 @@
 	}
 
 	.toggle-button:hover {
+		text-decoration: underline;
+	}
+
+	.receive-field {
+		opacity: 0.8;
+	}
+
+	.receive-field input {
+		color: #666;
+	}
+
+	.token-label {
+		white-space: nowrap;
+		color: #666;
+		font-size: 20px;
+		font-weight: 500;
+	}
+
+	input[type="number"] {
+		-moz-appearance: textfield;
+	}
+
+	input[type="number"]::-webkit-inner-spin-button,
+	input[type="number"]::-webkit-outer-spin-button {
+		-webkit-appearance: none;
+		margin: 0;
+	}
+
+	:global(.copy-button) {
+		padding: 2px 4px;
+		font-size: 0.9em;
+	}
+
+	.warning-text {
+		color: #ff4d4f;
+		font-size: 12px;
+		margin-top: 4px;
+		display: flex;
+		align-items: center;
+		gap: 4px;
+	}
+
+	.warning-text::before {
+		content: "⚠️";
+		font-size: 12px;
+	}
+
+	.view-details-button {
+		background: none;
+		border: none;
+		color: #4a90e2;
+		cursor: pointer;
+		padding: 4px 8px;
+		font-size: 14px;
+		border-radius: 4px;
+		transition: background-color 0.2s;
+	}
+
+	.view-details-button:hover {
+		background: #f0f7ff;
+	}
+
+	.details-modal {
+		position: fixed;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		background: white;
+		padding: 24px;
+		border-radius: 12px;
+		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+		z-index: 1000;
+		max-width: 600px;
+		width: 90%;
+		max-height: 90vh;
+		overflow-y: auto;
+	}
+
+	.details-modal-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 16px;
+		padding-bottom: 16px;
+		border-bottom: 1px solid #eee;
+	}
+
+	.details-modal-header h3 {
+		margin: 0;
+		font-size: 18px;
+		color: #333;
+	}
+
+	.close-button {
+		background: none;
+		border: none;
+		font-size: 24px;
+		color: #666;
+		cursor: pointer;
+		padding: 4px;
+		line-height: 1;
+	}
+
+	.close-button:hover {
+		color: #333;
+	}
+
+	.details-modal-content {
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+	}
+
+	.detail-item {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+		padding: 8px;
+		background: #f8f9fa;
+		border-radius: 8px;
+	}
+
+	.detail-item.error {
+		background: #fff2f0;
+	}
+
+	.detail-label {
+		font-size: 12px;
+		color: #666;
+		font-weight: 500;
+	}
+
+	.detail-value {
+		font-family: monospace;
+		font-size: 13px;
+		word-break: break-all;
+		color: #333;
+	}
+
+	.detail-item.error .detail-label {
+		color: #ff4d4f;
+	}
+
+	.detail-item.error .detail-value {
+		color: #cf1322;
+	}
+
+	.detail-value a {
+		color: #4a90e2;
+		text-decoration: none;
+		word-break: break-all;
+	}
+
+	.detail-value a:hover {
 		text-decoration: underline;
 	}
 </style>

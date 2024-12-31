@@ -49,7 +49,7 @@
     <div class="options">
         <div class="option">
             <h2>Create New Wallet</h2>
-            <p>Set up a password to create a new wallet with a fresh recovery phrase.</p>
+            <p>Set up a unlocking password to create a new wallet with a fresh recovery phrase.</p>
 
             <form on:submit|preventDefault={handleSubmit}>
                 <div class="field">

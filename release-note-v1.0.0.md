@@ -47,7 +47,7 @@ Users upgrading from previous versions will need to:
      - Important: Your ETH address in v1.0.0 will be different from your v0.x.x address
      - To transfer ETH from your old wallet:
        1. Go to the Bridge tab
-       2. Select "WBTB to BTB" direction
+       2. Select "Ethereum to Bitbi" direction
        3. Use the "Send ETH Out" button to transfer ETH from your old wallet
      - Make sure to transfer all ETH assets before discontinuing use of your old wallet
 4. Securely store your new seed phrase

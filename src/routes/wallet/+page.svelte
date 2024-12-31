@@ -67,8 +67,8 @@
 			<span>Total:</span> <span>{totalBalance.toFixed(4)} BTB</span>
 		</div>
 		<div class="swap-link">
-			<a href={uniswapLink} target="_blank" rel="noopener noreferrer">Swap WBTB for ETH on Uniswap</a>
-			<p class="swap-tip">Tip: Click Swap to quickly swap your Wrapped BTB (WBTB) for Ethereum (ETH) on Uniswap.</p>
+			<a href={uniswapLink} target="_blank" rel="noopener noreferrer">Swap BTB for ETH on Uniswap</a>
+			<p class="swap-tip">Tip: Click Swap to quickly swap your BTB for Ethereum (ETH) on Uniswap.</p>
 		</div>
 	</div>
 	{#if loadingProgress < 100}

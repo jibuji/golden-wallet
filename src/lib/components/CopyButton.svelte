@@ -38,7 +38,7 @@
         background: none;
         border: none;
         cursor: pointer;
-        padding: 4px 8px;
+        padding: 4px 4px;
         font-size: 1em;
         transition: all 0.2s;
         border-radius: 4px;

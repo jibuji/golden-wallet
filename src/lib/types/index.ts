@@ -154,7 +154,7 @@ export interface IWrapTransaction {
   receiving_address: string
   exception_details: string
   exception_count: number
-  minted_wbtb_amount: number | null
+  minted_ebtb_amount: number | null
   last_exception_time: string | null
   create_time: string
 }
