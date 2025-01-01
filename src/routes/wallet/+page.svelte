@@ -66,10 +66,10 @@
 		<div class="balance-item">
 			<span>Total:</span> <span>{totalBalance.toFixed(4)} BTB</span>
 		</div>
-		<div class="swap-link">
+		<!-- <div class="swap-link">
 			<a href={uniswapLink} target="_blank" rel="noopener noreferrer">Swap eBTB for ETH on Uniswap</a>
 			<p class="swap-tip">Tip: Click Swap to quickly sell your eBTB(wrapped BTB on ethereum) on Uniswap.</p>
-		</div>
+		</div> -->
 	</div>
 	{#if loadingProgress < 100}
 		<div class="popup">
