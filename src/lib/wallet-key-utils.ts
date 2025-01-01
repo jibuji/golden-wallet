@@ -166,7 +166,7 @@ export function deriveWalletKeys(mnemonic: string): WalletKeys {
         mnemonic,
         walletId,
         ethAddress,
-        ethPrivateKey: bytesToHex(ethPrivateKey)
+        ethPrivateKey: `0x${bytesToHex(ethPrivateKey)}`
     };
 }
 

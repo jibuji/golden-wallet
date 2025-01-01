@@ -77,7 +77,7 @@
 
 <div class="container">
     <h1>Restore Wallet</h1>
-    <p>Enter your 24-word recovery phrase and create a new password.</p>
+    <p>Enter your 24-word recovery phrase and create a new unlocking password.</p>
 
     <form on:submit|preventDefault={handleSubmit}>
         <div class="field">
@@ -97,12 +97,12 @@
         </div>
 
         <div class="field">
-            <label for="password">New Password</label>
+            <label for="password">New Unlocking Password</label>
             <input
                 type="password"
                 id="password"
                 bind:value={password}
-                placeholder="Enter new password"
+                placeholder="Enter new unlocking password"
                 required
                 minlength="8"
             />

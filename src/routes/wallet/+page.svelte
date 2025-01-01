@@ -35,7 +35,7 @@
 		}
 	}
 
-	const uniswapLink = "https://app.uniswap.org/explore/tokens/ethereum/0x37c6c6a792bbb4c00436b5abfd2ba81923b15d22";
+	const uniswapLink = "https://app.uniswap.org/explore/tokens/ethereum/0x8defe5b69c162cd9bb5e4d2b61cf68602d442eb1";
 	onMount(() => {
 		window.makeRpcRequest = makeRpcRequest;
 	});
@@ -67,8 +67,8 @@
 			<span>Total:</span> <span>{totalBalance.toFixed(4)} BTB</span>
 		</div>
 		<div class="swap-link">
-			<a href={uniswapLink} target="_blank" rel="noopener noreferrer">Swap WBTB for ETH on Uniswap</a>
-			<p class="swap-tip">Tip: Click Swap to quickly swap your Wrapped BTB (WBTB) for Ethereum (ETH) on Uniswap.</p>
+			<a href={uniswapLink} target="_blank" rel="noopener noreferrer">Swap eBTB for ETH on Uniswap</a>
+			<p class="swap-tip">Tip: Click Swap to quickly sell your eBTB(wrapped BTB on ethereum) on Uniswap.</p>
 		</div>
 	</div>
 	{#if loadingProgress < 100}
