@@ -161,21 +161,20 @@
 
 	.wrapper {
 		display: flex;
-		justify-content: space-between;
+		gap: 30px;
 		width: 100%;
 	}
 
 	form {
 		display: flex;
 		flex-direction: column;
-		gap: 1em;
+		gap: 20px;
 		width: 100%;
-		padding: 1em;
+		max-width: 400px;
+		padding: 25px;
 		background-color: #fff;
-		border-radius: 8px;
-		box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
-		flex: 0.5;
-		margin-right: 2em;
+		border-radius: 12px;
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 	}
 
 	form div {
@@ -185,73 +184,124 @@
 	}
 
 	form div span {
-		font-weight: bold;
-		margin-bottom: 0.5em;
+		font-weight: 600;
+		margin-bottom: 8px;
+		color: #333;
 	}
 
 	input,
 	select {
-		padding: 0.5em;
-		border: 1px solid #ccc;
-		border-radius: 4px;
-		font-size: 0.9em;
+		padding: 12px;
+		border: 1px solid #e0e0e0;
+		border-radius: 6px;
+		font-size: 1rem;
+		transition: all 0.2s ease;
+		width: 100%;
+		box-sizing: border-box;
+	}
+
+	input:focus,
+	select:focus {
+		border-color: #4CAF50;
+		box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.1);
+		outline: none;
+	}
+
+	select {
+		background-color: white;
+		cursor: pointer;
 	}
 
 	button {
-		padding: 0.5em 1em;
+		padding: 12px 24px;
 		border: none;
-		border-radius: 4px;
-		background-color: #4caf50;
+		border-radius: 6px;
+		background-color: #4CAF50;
 		color: white;
 		cursor: pointer;
-		transition: background-color 0.3s;
-		font-size: 0.9em;
-		margin-top: 1em;
+		transition: background-color 0.2s ease;
+		font-size: 1rem;
+		font-weight: 600;
+		margin-top: 10px;
 	}
 
 	button:hover {
-		background-color: #45a049;
+		background-color: #43A047;
 	}
 
 	.table-container {
 		flex: 1;
 		background-color: #fff;
-		border-radius: 8px;
-		box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
-		padding: 15px;
+		border-radius: 12px;
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+		padding: 25px;
+		min-width: 0; /* Prevents flex item from overflowing */
 	}
 
 	table {
 		width: 100%;
-		/* margin-top: 2em; */
 		border-collapse: collapse;
+		margin-bottom: 20px;
 	}
 
 	th,
 	td {
-		border: 1px solid #ddd;
-		padding: 0.5em;
+		padding: 12px;
 		text-align: left;
-		font-size: 0.9em;
+		border-bottom: 1px solid #f0f0f0;
+		font-size: 0.95rem;
+	}
+
+	th {
+		font-weight: 600;
+		color: #333;
+		background-color: #F5F5F5;
+	}
+
+	tr:hover {
+		background-color: #F9F9F9;
 	}
 
 	td button {
 		margin: 0;
-        vertical-align: middle;
-    }
-
-	th {
-		background-color: #4caf50;
-		color: white;
+		padding: 8px 16px;
+		font-size: 0.9rem;
+		background-color: #4CAF50;
 	}
 
-	tr:nth-child(even) {
-		background-color: #f2f2f2;
+	td button:hover {
+		background-color: #43A047;
 	}
+
 	.pagination {
 		display: flex;
 		justify-content: flex-end;
-		gap: 1em;
-        align-items: baseline;
+		gap: 15px;
+		align-items: center;
+		margin-top: 20px;
+		padding-top: 20px;
+		border-top: 1px solid #f0f0f0;
+	}
+
+	.pagination button {
+		padding: 8px 16px;
+		background-color: #4CAF50;
+		color: white;
+		border: none;
+		border-radius: 6px;
+		cursor: pointer;
+		font-size: 0.95rem;
+		margin: 0;
+	}
+
+	.pagination button:disabled {
+		background-color: #e0e0e0;
+		cursor: not-allowed;
+	}
+
+	.pagination span {
+		font-size: 1rem;
+		color: #666;
+		margin: 0 10px;
 	}
 </style>

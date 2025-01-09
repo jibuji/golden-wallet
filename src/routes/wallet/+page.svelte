@@ -36,9 +36,9 @@
 	}
 
 	const uniswapLink = "https://app.uniswap.org/explore/tokens/ethereum/0x8defe5b69c162cd9bb5e4d2b61cf68602d442eb1";
-	onMount(() => {
-		window.makeRpcRequest = makeRpcRequest;
-	});
+	// onMount(() => {
+	// 	window.makeRpcRequest = makeRpcRequest;
+	// });
 </script>
 
 <div class="main">
@@ -103,87 +103,126 @@
 		display: flex;
 		justify-content: center;
 		align-items: center;
+		z-index: 1000;
 	}
 
 	.popup-content {
 		background-color: white;
-		padding: 20px;
-		border-radius: 10px;
+		padding: 30px;
+		border-radius: 12px;
 		width: 80%;
+		max-width: 500px;
 		text-align: center;
+		box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+	}
+
+	.popup-content h2 {
+		margin: 0 0 15px 0;
+		color: #333;
 	}
 
 	.progress-bar {
-		background-color: #f3f3f3;
-		border-radius: 5px;
+		background-color: #E8F5E9;
+		border-radius: 8px;
 		width: 100%;
-		height: 20px;
-		margin: 10px 0;
+		height: 12px;
+		margin: 20px 0;
+		overflow: hidden;
 	}
 
 	.progress-bar-fill {
-		background-color: #4caf50;
+		background-color: #4CAF50;
 		height: 100%;
-		border-radius: 5px;
+		border-radius: 8px;
+		transition: width 0.3s ease;
 	}
 
 	.balances {
 		width: 100%;
-		max-width: 500px;
-		height: 100%;
-		border: 1px solid #e0e0e0;
-		padding: 20px;
-		background-color: #f8f8f8;
-		border-radius: 5px;
-		box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+		max-width: 600px;
+		margin: 0 auto;
+		background-color: #ffffff;
+		border-radius: 12px;
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+		padding: 25px;
 	}
 
 	.balances h2 {
 		display: flex;
 		align-items: center;
-		font-size: 1.5em;
-		margin-bottom: 20px;
+		font-size: 1.75rem;
+		margin: 0 0 25px 0;
+		color: #333;
+		padding-bottom: 15px;
+		border-bottom: 2px solid #E8F5E9;
 	}
 
 	.balance-item {
 		display: flex;
 		justify-content: space-between;
-		padding: 10px;
-		border-bottom: 1px solid #e0e0e0;
-		font-size: 1.1em;
+		align-items: center;
+		padding: 15px;
+		border-bottom: 1px solid #f0f0f0;
+		font-size: 1.1rem;
 	}
 
 	.balance-item:last-child {
 		border-bottom: none;
+		margin-top: 10px;
+		padding-top: 20px;
+		border-top: 2px solid #E8F5E9;
 	}
 
 	.balance-item span:first-child {
-		font-weight: bold;
+		color: #666;
+		font-weight: 500;
+	}
+
+	.balance-item span:last-child {
+		font-weight: 600;
+		color: #333;
+	}
+
+	.balance-item:last-child span {
+		font-size: 1.2rem;
+		font-weight: 600;
+	}
+
+	.balance-item:last-child span:last-child {
+		color: #4CAF50;
+	}
+
+	hr {
+		border: none;
+		border-top: 1px solid #f0f0f0;
+		margin: 15px 0;
 	}
 
 	.swap-link {
-		margin-top: 20px;
+		margin-top: 25px;
 		text-align: center;
+		padding-top: 20px;
+		border-top: 1px solid #f0f0f0;
 	}
 
 	.swap-link a {
 		display: inline-block;
-		background-color: #1969ff;
+		background-color: #4CAF50;
 		color: white;
-		padding: 10px 15px;
-		border-radius: 5px;
+		padding: 12px 24px;
+		border-radius: 6px;
 		text-decoration: none;
-		font-weight: bold;
-		transition: background-color 0.3s ease;
+		font-weight: 600;
+		transition: background-color 0.2s ease;
 	}
 
 	.swap-link a:hover {
-		background-color: #0052cc;
+		background-color: #43A047;
 	}
 
 	.swap-tip {
-		font-size: 0.9em;
+		font-size: 0.9rem;
 		color: #666;
-		margin-top: 10px;
+		margin-top: 12px;
 	}
 </style>

@@ -87,42 +87,85 @@
 
 <style>
     .container {
-        max-width: 400px;
-        margin: 0 auto;
-        padding: 2rem;
+        max-width: 480px;
+        margin: 40px auto;
+        padding: 2.5rem;
+        background-color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        box-sizing: border-box;
+    }
+
+    h1 {
+        margin: 0 0 1rem 0;
+        font-size: 2.25rem;
+        color: #333;
+        text-align: center;
+    }
+
+    p {
+        margin: 0 0 2rem 0;
+        color: #666;
+        text-align: center;
+        font-size: 1.1rem;
+        line-height: 1.5;
     }
 
     .field {
-        margin-bottom: 1rem;
+        margin-bottom: 1.5rem;
     }
 
-    .error {
-        color: #d32f2f;
-        margin-bottom: 1rem;
-        padding: 1rem;
-        background-color: #ffebee;
-        border-radius: 4px;
-        border: 1px solid #ffcdd2;
+    label {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: #333;
+        font-weight: 500;
     }
 
     input {
         width: 100%;
-        padding: 0.5rem;
-        margin-top: 0.25rem;
+        padding: 0.75rem;
+        margin: 0;
         border: 1px solid #ccc;
         border-radius: 4px;
+        font-size: 1rem;
+        box-sizing: border-box;
+        outline: none;
+        transition: border-color 0.2s;
+    }
+
+    input:focus {
+        border-color: #4CAF50;
+        box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.1);
+    }
+
+    .error {
+        color: #d32f2f;
+        margin-bottom: 1.5rem;
+        padding: 1rem;
+        background-color: #ffebee;
+        border-radius: 4px;
+        border: 1px solid #ffcdd2;
+        box-sizing: border-box;
     }
 
     button {
         width: 100%;
-        padding: 0.75rem;
+        padding: 0.875rem;
         background-color: #4CAF50;
         color: white;
         border: none;
         border-radius: 4px;
         cursor: pointer;
         font-size: 1rem;
+        font-weight: 500;
         margin-bottom: 1rem;
+        transition: background-color 0.2s;
+        box-sizing: border-box;
+    }
+
+    button:hover:not(:disabled) {
+        background-color: #43a047;
     }
 
     button:disabled {
@@ -132,7 +175,7 @@
 
     .restore-section {
         margin-top: 2rem;
-        padding-top: 1rem;
+        padding-top: 1.5rem;
         border-top: 1px solid #eee;
         text-align: center;
     }
@@ -144,6 +187,10 @@
 
     button.secondary {
         background-color: #2196F3;
+    }
+
+    button.secondary:hover:not(:disabled) {
+        background-color: #1976D2;
     }
 
     .error-message {
@@ -172,5 +219,12 @@
         margin: 0.25rem 0;
         color: #666;
         font-size: 0.9rem;
+    }
+
+    :global(body) {
+        margin: 0;
+        padding: 0;
+        background-color: #f5f5f5;
+        min-height: 100vh;
     }
 </style>

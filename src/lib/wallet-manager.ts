@@ -9,7 +9,7 @@ export class WalletManager {
     static async initializeWallet(): Promise<boolean> {
         try {
             // Check if wallet exists
-            const wallets = await gRpcClient.listWallets();
+            const wallets = await gRpcClient.listWalletDir();
             
             if (wallets.includes(this.WALLET_NAME)) {
                 // Wallet exists, load it

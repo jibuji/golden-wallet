@@ -100,88 +100,101 @@
 
 <style>
 	.transactions {
-		width: 90%;
-		margin: 20px auto;
-		padding: 20px;
+		width: 100%;
+		max-width: 1000px;
+		margin: 0 auto;
+		padding: 30px;
 		box-sizing: border-box;
-		background-color: #f9f9f9;
-		border-radius: 10px;
-		box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+		background-color: #ffffff;
+		border-radius: 12px;
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 	}
 
 	.transactions h2 {
-		text-align: center;
-		margin-bottom: 20px;
+		margin: 0 0 25px 0;
 		color: #333;
-		font-size: 24px;
+		font-size: 1.75rem;
+		padding-bottom: 15px;
+		border-bottom: 2px solid #E8F5E9;
 	}
 
 	.transactions table {
 		width: 100%;
 		border-collapse: collapse;
+		margin-bottom: 20px;
 	}
 
 	.transactions table th,
 	.transactions table td {
-		border: 1px solid #ddd;
-		padding: 8px;
+		padding: 12px;
 		text-align: left;
-	}
-
-	.transactions table tr:nth-child(even) {
-		background-color: #f2f2f2;
+		border-bottom: 1px solid #f0f0f0;
 	}
 
 	.transactions table th {
-		background-color: #4caf50;
-		color: white;
+		font-weight: 600;
+		color: #333;
+		background-color: #F5F5F5;
+		white-space: nowrap;
+	}
+
+	.transactions table tr:hover {
+		background-color: #F9F9F9;
 	}
 
 	.transactions button {
-		margin: 0;
-		padding: 10px;
+		padding: 8px 16px;
 		border: none;
-		background-color: #4caf50;
+		background-color: #4CAF50;
 		color: white;
 		cursor: pointer;
-		font-size: 1em;
+		font-size: 0.95rem;
+		border-radius: 6px;
+		transition: background-color 0.2s ease;
+	}
+
+	.transactions button:hover:not(:disabled) {
+		background-color: #43A047;
 	}
 
 	.transactions button:disabled {
-		background-color: #ddd;
+		background-color: #e0e0e0;
 		cursor: not-allowed;
 	}
+
 	.align-horiz {
 		display: flex;
 		justify-content: space-between;
-		padding: 2px 10px;
-		align-items: baseline;
+		align-items: center;
+		gap: 10px;
+	}
+
+	.align-horiz a {
+		color: #4CAF50;
+		text-decoration: none;
+		font-weight: 500;
+	}
+
+	.align-horiz a:hover {
+		text-decoration: underline;
 	}
 
 	.pagination {
-		margin: 20px;
 		display: flex;
 		justify-content: flex-end;
 		align-items: center;
+		gap: 15px;
+		margin-top: 20px;
+		padding-top: 20px;
+		border-top: 1px solid #f0f0f0;
 	}
 
 	.pagination button {
-		padding: 10px 20px;
-		background-color: #4caf50;
-		color: white;
-		border: none;
-		border-radius: 5px;
-		cursor: pointer;
-	}
-
-	.pagination button:disabled {
-		background-color: #ddd;
-		cursor: not-allowed;
+		margin: 0;
 	}
 
 	.pagination span {
-		font-size: 18px;
-		color: #333;
-		margin: 20px;
+		font-size: 1rem;
+		color: #666;
 	}
 </style>

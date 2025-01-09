@@ -182,80 +182,116 @@
 
 <style>
 	form {
-		max-width: 1000px;
-		margin: 0 auto;
-		padding: 20px;
+		max-width: 800px;
+		margin: 0 auto 30px;
+		padding: 30px;
 		background-color: #fff;
-		box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-		border-radius: 5px;
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+		border-radius: 12px;
 	}
+
 	label {
 		display: block;
-		font-weight: bold;
-		margin-bottom: 5px;
+		font-weight: 600;
+		margin-bottom: 8px;
+		color: #333;
 	}
+
 	input {
 		width: 100%;
-		padding: 10px;
+		padding: 12px;
 		box-sizing: border-box;
-		border: 1px solid #ddd;
-		border-radius: 5px;
-		margin-bottom: 15px;
+		border: 1px solid #e0e0e0;
+		border-radius: 6px;
+		font-size: 1rem;
+		transition: all 0.2s ease;
+		margin-bottom: 20px;
+	}
+
+	input:focus {
+		border-color: #4CAF50;
+		box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.1);
+		outline: none;
 	}
 
 	button {
-		background-color: #007bff;
+		background-color: #4CAF50;
 		color: white;
 		border: none;
-		padding: 10px 20px;
-		margin: 10px 0;
+		padding: 12px 24px;
 		cursor: pointer;
-		border-radius: 5px;
-		font-size: 1em;
+		border-radius: 6px;
+		font-size: 1rem;
+		font-weight: 600;
+		transition: background-color 0.2s ease;
 	}
-	button:hover {
-		background-color: #0056b3;
+
+	button:hover:not(:disabled) {
+		background-color: #43A047;
 	}
+
+	button:disabled {
+		background-color: #e0e0e0;
+		cursor: not-allowed;
+	}
+
 	.tx-fee {
-		margin-top: 20px;
-		background-color: #f8f9fa;
-		border-radius: 5px;
+		margin-top: 25px;
+		padding: 20px;
+		background-color: #F5F5F5;
+		border-radius: 8px;
 	}
+
 	.input-with-unit {
 		display: flex;
-		align-items: baseline;
+		align-items: center;
+		gap: 10px;
 	}
+
 	.unit {
-		margin-left: 10px;
+		font-weight: 500;
+		color: #666;
+		min-width: 60px;
 	}
+
 	.balance-and-submit {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
+		margin-top: 30px;
+		padding-top: 20px;
+		border-top: 1px solid #f0f0f0;
 	}
-	.balance-and-submit button {
-		margin: 20px;
-	}
+
 	.current-balance {
-		font-size: 1.2em;
-		font-weight: bold;
+		font-size: 1.1rem;
 	}
-	input {
-		font-size: 1em;
+
+	.current-balance span:first-child {
+		color: #666;
 	}
+
+	.current-balance span:last-child {
+		font-weight: 600;
+		color: #4CAF50;
+		margin-left: 8px;
+	}
+
 	.sent-transactions {
-		max-width: 1000px;
-		margin: 20px auto;
-		padding: 20px;
+		max-width: 800px;
+		margin: 0 auto;
+		padding: 30px;
 		background-color: #fff;
-		box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-		border-radius: 5px;
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+		border-radius: 12px;
 	}
 
 	.sent-transactions h2 {
-		margin-bottom: 20px;
+		margin: 0 0 25px 0;
 		color: #333;
-		font-size: 24px;
+		font-size: 1.5rem;
+		padding-bottom: 15px;
+		border-bottom: 2px solid #E8F5E9;
 	}
 
 	.sent-transactions table {
@@ -265,26 +301,31 @@
 
 	.sent-transactions th,
 	.sent-transactions td {
-		padding: 10px;
-		border: 1px solid #ddd;
+		padding: 12px;
+		text-align: left;
+		border-bottom: 1px solid #f0f0f0;
 	}
 
 	.sent-transactions th {
-		background-color: #f2f2f2;
+		font-weight: 600;
+		color: #333;
+		background-color: #F5F5F5;
 	}
 
 	.sent-transactions tr:hover {
-		background-color: #f5f5f5;
+		background-color: #F9F9F9;
 	}
 
 	.sent-transactions a {
-		color: #007bff;
+		color: #4CAF50;
 		text-decoration: none;
+		font-weight: 500;
 	}
 
 	.sent-transactions a:hover {
-		color: #0056b3;
+		text-decoration: underline;
 	}
+
 	.loading-popup {
 		position: fixed;
 		top: 0;
@@ -296,8 +337,10 @@
 		justify-content: center;
 		align-items: center;
 		color: white;
-		font-size: 2em;
+		font-size: 1.5rem;
+		z-index: 1000;
 	}
+
 	.modal {
 		position: fixed;
 		top: 0;
@@ -308,11 +351,36 @@
 		display: flex;
 		justify-content: center;
 		align-items: center;
+		z-index: 1000;
 	}
 
 	.modal-content {
 		background-color: white;
-		padding: 20px;
-		border-radius: 10px;
+		padding: 30px;
+		border-radius: 12px;
+		max-width: 500px;
+		width: 90%;
+		text-align: center;
+		box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+	}
+
+	.modal-content h2 {
+		margin: 0 0 20px 0;
+		color: #333;
+	}
+
+	.modal-content p {
+		margin: 0 0 20px 0;
+		color: #666;
+	}
+
+	.modal-content a {
+		color: #4CAF50;
+		text-decoration: none;
+		font-weight: 500;
+	}
+
+	.modal-content a:hover {
+		text-decoration: underline;
 	}
 </style>
