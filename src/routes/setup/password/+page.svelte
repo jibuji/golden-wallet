@@ -40,7 +40,35 @@
 </script>
 
 {#if isLoading}
-    <LoadingOverlay message="Creating wallet..." />
+    <LoadingOverlay>
+        <div class="loading-content">
+            {#if $walletStore.isScanning}
+                <h3>Setting up your wallet...</h3>
+                {#if $walletStore.scanProgress}
+                    <div class="progress-info">
+                        <p class="progress-text">
+                            Scanning wallet: {($walletStore.scanProgress.progress * 100).toFixed(1)}%
+                        </p>
+                        {#if $walletStore.scanProgress.duration}
+                            <p class="duration-text">
+                                Duration: {Math.round($walletStore.scanProgress.duration)}s
+                            </p>
+                        {/if}
+                    </div>
+                {/if}
+                {#if $walletStore.serverError?.tips}
+                    <div class="tips">
+                        {#each $walletStore.serverError.tips as tip}
+                            <p class="tip">{tip}</p>
+                        {/each}
+                    </div>
+                {/if}
+            {:else}
+                <h3>Creating wallet...</h3>
+                <p class="info-text">Please wait while we set up your wallet</p>
+            {/if}
+        </div>
+    </LoadingOverlay>
 {/if}
 
 <div class="container">
@@ -183,5 +211,52 @@
     button:disabled {
         background-color: #ccc;
         cursor: not-allowed;
+    }
+
+    .loading-content {
+        text-align: center;
+        max-width: 400px;
+        margin: 0 auto;
+    }
+
+    .loading-content h3 {
+        margin: 0 0 1rem 0;
+        color: #2196F3;
+        font-size: 1.5rem;
+    }
+
+    .progress-info {
+        margin: 1rem 0;
+    }
+
+    .progress-text {
+        font-size: 1.1rem;
+        color: #4CAF50;
+        margin: 0.5rem 0;
+    }
+
+    .duration-text {
+        font-size: 0.9rem;
+        color: #666;
+        margin: 0.25rem 0;
+    }
+
+    .tips {
+        margin-top: 1.5rem;
+        padding: 1rem;
+        background: rgba(33, 150, 243, 0.1);
+        border-radius: 8px;
+    }
+
+    .tip {
+        margin: 0.5rem 0;
+        color: #666;
+        font-size: 0.9rem;
+    }
+
+    .info-text {
+        color: #666;
+        font-size: 1rem;
+        margin: 0.5rem 0;
     }
 </style>

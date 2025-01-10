@@ -145,8 +145,9 @@
                 </div>
                 <p class="progress-text">
                     {Math.round(scanProgress.progress * 100)}% complete
-                    {#if scanProgress.remaining_seconds}
-                        (About {Math.ceil(scanProgress.remaining_seconds / 60)} minutes remaining)
+                    {#if scanProgress.duration}
+                        <br>
+                        <span class="duration">Scanning time: {Math.round(scanProgress.duration)}s</span>
                     {/if}
                 </p>
             {/if}
@@ -256,5 +257,13 @@
     .progress-text {
         color: #666;
         font-size: 0.9rem;
+        margin: 0.5rem 0;
+    }
+
+    .duration {
+        color: #888;
+        font-size: 0.85rem;
+        display: inline-block;
+        margin-top: 0.25rem;
     }
 </style>
