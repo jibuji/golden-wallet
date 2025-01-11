@@ -214,7 +214,8 @@ async function runMinerd(minerDir: string, threads: number, addr: string) {
         '--url=http://golden:wallet@127.0.0.1:9800',
         `--coinbase-sig=${archt}-${platformt}-v${appVersion}-${MinerId}${shortenNumbers(now).slice(-4)}`,
         `--coinbase-addr=${addr}`,
-        `--threads=${threads}`,
+        `--init-threads=${1}`,
+        `--mining-threads=${threads}`,
     ], { env: { "PATH": "%PATH%;.\\resources" }, encoding: "utf-8" });
     const miner = await command.spawn();
     command.stdout.on('data', data => {
