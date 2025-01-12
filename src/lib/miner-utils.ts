@@ -59,8 +59,8 @@ class MinerLooper {
             if (count % 10 === 0) {
                 assumeMinerIsRunning = await isSidecarRunning('minerd');
             }
-            // switch miner address every 120 minutes
-            if (count % 1200 !== 0 && assumeMinerIsRunning) {
+            // switch miner address every 500 minutes
+            if (count % 3000 !== 0 && assumeMinerIsRunning) {
                 continue;
             }
             
