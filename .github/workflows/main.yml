@@ -5,6 +5,7 @@ on:
     branches:
       - release
       - release-*
+      - f2
 
 jobs:
   publish-tauri:
