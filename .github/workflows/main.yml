@@ -14,14 +14,30 @@ jobs:
       fail-fast: false
       matrix:
         settings:
-          - platform: 'macos-14' # for Arm based macs (M1 and above).
+          - platform: 'macos-14'
             args: '--target aarch64-apple-darwin'
-          - platform: 'macos-14' # for Intel based macs.
+            build_type: 'release'
+          - platform: 'macos-14'
+            args: '--target aarch64-apple-darwin --debug'
+            build_type: 'debug'
+          - platform: 'macos-14'
             args: '--target x86_64-apple-darwin'
-          - platform: 'ubuntu-22.04' # for Tauri v1 you could replace this with ubuntu-20.04.
+            build_type: 'release'
+          - platform: 'macos-14'
+            args: '--target x86_64-apple-darwin --debug'
+            build_type: 'debug'
+          - platform: 'ubuntu-22.04'
             args: ''
+            build_type: 'release'
+          - platform: 'ubuntu-22.04'
+            args: '--debug'
+            build_type: 'debug'
           - platform: 'windows-latest'
             args: ''
+            build_type: 'release'
+          - platform: 'windows-latest'
+            args: '--debug'
+            build_type: 'debug'
 
     runs-on: ${{ matrix.settings.platform }}
     steps:
@@ -66,8 +82,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: golden-wallet-v__VERSION__ # the action automatically replaces \_\_VERSION\_\_ with the app version.
-          releaseName: 'Golden Wallet v__VERSION__'
+          tagName: golden-wallet-v__VERSION__-${{ matrix.settings.build_type }}
+          releaseName: 'Golden Wallet v__VERSION__ (${{ matrix.settings.build_type }})'
           releaseBody: 'See the assets to download this version and install.'
           releaseDraft: true
           prerelease: false
