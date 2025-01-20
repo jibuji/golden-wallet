@@ -133,23 +133,25 @@
 {#if isScanning}
     <div class="scan-overlay">
         <div class="scan-content">
-            <h3>Scanning Blockchain</h3>
-            <p>Please wait while we scan for your wallet's transactions...</p>
-            
+            <h3>Setting up your wallet...</h3>
             {#if scanProgress}
-                <div class="progress-bar">
-                    <div 
-                        class="progress-fill"
-                        style="width: {scanProgress.progress * 100}%"
-                    ></div>
-                </div>
-                <p class="progress-text">
-                    {Math.round(scanProgress.progress * 100)}% complete
+                <div class="progress-info">
+                    <p class="progress-text">
+                        Scanning wallet: {(scanProgress.progress * 100).toFixed(1)}%
+                    </p>
                     {#if scanProgress.duration}
-                        <br>
-                        <span class="duration">Scanning time: {Math.round(scanProgress.duration)}s</span>
+                        <p class="duration-text">
+                            Duration: {Math.round(scanProgress.duration)}s
+                        </p>
                     {/if}
-                </p>
+                </div>
+            {/if}
+            {#if $walletStore.serverError?.tips}
+                <div class="tips">
+                    {#each $walletStore.serverError.tips as tip}
+                        <p class="tip">{tip}</p>
+                    {/each}
+                </div>
             {/if}
         </div>
     </div>
@@ -240,30 +242,32 @@
         max-width: 400px;
     }
 
-    .progress-bar {
-        height: 8px;
-        background: #eee;
-        border-radius: 4px;
+    .progress-info {
         margin: 1rem 0;
-        overflow: hidden;
-    }
-
-    .progress-fill {
-        height: 100%;
-        background: #4CAF50;
-        transition: width 0.3s ease;
     }
 
     .progress-text {
-        color: #666;
-        font-size: 0.9rem;
+        font-size: 1.1rem;
+        color: #4CAF50;
         margin: 0.5rem 0;
     }
 
-    .duration {
-        color: #888;
-        font-size: 0.85rem;
-        display: inline-block;
-        margin-top: 0.25rem;
+    .duration-text {
+        font-size: 0.9rem;
+        color: #666;
+        margin: 0.25rem 0;
+    }
+
+    .tips {
+        margin-top: 1.5rem;
+        padding: 1rem;
+        background: rgba(33, 150, 243, 0.1);
+        border-radius: 8px;
+    }
+
+    .tip {
+        margin: 0.5rem 0;
+        color: #666;
+        font-size: 0.9rem;
     }
 </style>
