@@ -89,3 +89,4 @@ jobs:
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.settings.args }}
+          artifactPath: ${{ matrix.settings.build_type == 'debug' && 'src-tauri/target/debug/bundle' || 'src-tauri/target/release/bundle' }}
