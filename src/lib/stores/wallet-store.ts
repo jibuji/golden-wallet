@@ -8,7 +8,7 @@ import { BRIDGE_SERVER_URL, DEFAULT_WALLET_NAME } from '$lib/config';
 import { validateMnemonic } from '../wallet-key-utils';
 import { WalletManager } from '../wallet-manager';
 import { gRpcClient } from '../bitbi-rpc/index';
-import type { ScanProgress } from '../bitbi-rpc/index';
+import type { ScanProgress } from '../types';
 
 interface ServerError {
     message: string;
@@ -60,11 +60,61 @@ function createWalletStore() {
         }, 60000);
     }
 
+    function handleScanProgress(
+        progress: ScanProgress,
+        blockchainInfo?: {
+            initialBlockDownload: boolean;
+            progress: number;
+            blocks: number;
+            headers: number;
+        }
+    ) {
+        const tips: string[] = [];
+        
+        // Add blockchain sync status if available
+        if (blockchainInfo) {
+            if (blockchainInfo.initialBlockDownload) {
+                // Calculate sync progress based on blocks/headers ratio
+                const syncProgress = blockchainInfo.headers > 0 
+                    ? (blockchainInfo.blocks / blockchainInfo.headers) * 100 
+                    : 0;
+                
+                tips.push(`Blockchain syncing: ${syncProgress.toFixed(1)}%`);
+                tips.push(`Blocks: ${blockchainInfo.blocks.toLocaleString()}/${blockchainInfo.headers.toLocaleString()}`);
+            }
+        }
+        
+        // Add wallet scanning progress
+        tips.push(`Wallet scan: ${(progress.progress * 100).toFixed(1)}%`);
+        
+        if (progress.duration) {
+            tips.push(`Scan duration: ${Math.round(progress.duration)}s`);
+        }
+        
+        tips.push('Please wait while we process your wallet');
+        
+        if (blockchainInfo?.initialBlockDownload) {
+            tips.push('Note: Initial blockchain download in progress');
+            tips.push('The wallet will continue scanning as new blocks arrive');
+        }
+
+        update(state => ({
+            ...state,
+            isScanning: true,
+            scanProgress: progress,
+            serverError: {
+                message: blockchainInfo?.initialBlockDownload 
+                    ? 'Syncing blockchain and scanning wallet...'
+                    : 'Scanning wallet...',
+                tips
+            }
+        }));
+    }
+
     async function initializeWallet(password: string, mnemonic?: string): Promise<boolean> {
         update(state => ({ ...state, isLoading: true, error: null }));
         try {
             const walletKeys = mnemonic ? deriveWalletKeys(mnemonic) : generateNewWallet();
-            console.log('walletKeys', walletKeys);
             
             // Initialize core wallet first
             const walletInitialized = await WalletManager.initializeWallet();
@@ -84,16 +134,26 @@ function createWalletStore() {
             }
             
             const { blindedKey } = await response.json();
-            console.log("blindedKey: ", blindedKey);
             const encryptionKey = await deriveClientEncryptionKey(password, blindedKey);
             
-            // Derive and import descriptors
+            // Derive and import descriptors with scan check
             const descriptors = deriveDescriptors(walletKeys.masterPrivateKey, walletKeys.masterPublicKey);
-            console.log("descriptors: ", descriptors);
-            const descriptorsImported = await WalletManager.importDescriptors(descriptors);
+            const descriptorsImported = await WalletManager.importDescriptorsWithScanCheck(
+                descriptors,
+                handleScanProgress
+            );
+            
             if (!descriptorsImported) {
                 throw new Error('Failed to import descriptors');
             }
+
+            // Clear scanning state after successful import
+            update(state => ({
+                ...state,
+                isScanning: false,
+                scanProgress: undefined,
+                serverError: undefined
+            }));
 
             await storeWalletData(walletKeys, encryptionKey);
             
@@ -127,7 +187,9 @@ function createWalletStore() {
             update(state => ({
                 ...state,
                 isLoading: false,
-                error: errorMessage
+                error: errorMessage,
+                isScanning: false,
+                scanProgress: undefined
             }));
             return false;
         }
@@ -137,9 +199,6 @@ function createWalletStore() {
     const MAX_PASSWORD_ATTEMPTS = 3;
 
     async function unlockWallet(password: string): Promise<boolean> {
-        let currentState: WalletState | undefined;
-        subscribe(state => { currentState = state })();
-
         update(state => ({ ...state, isLoading: true, error: null, serverError: undefined }));
         
         try {
@@ -149,92 +208,90 @@ function createWalletStore() {
                 throw new Error('Failed to initialize core wallet');
             }
 
-            try {
-                const clientHmac = await generateClientHmac(password);
-                const response = await fetch(`${BRIDGE_SERVER_URL}/wallet/blind-key`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ clientHmac })
-                });
-                
-                if (!response.ok) {
-                    throw new Error('Server communication error');
-                }
-                
-                const { blindedKey } = await response.json();
-                const encryptionKey = await deriveClientEncryptionKey(password, blindedKey);
-                
-                const result = await retrieveWalletData(encryptionKey);
-                if (!result) {
-                    update(state => ({
-                        ...state,
-                        isLoading: false,
-                        failedAttempts: state.failedAttempts + 1,
-                        error: `Invalid password. You can keep trying or restore your wallet using your recovery phrase.`
-                    }));
-                    return false;
-                }
-                
-                if (result) {
-                    console.log("debug: new descriptors: ", result.bitcoinData.descriptors);
-                    // Re-import descriptors on unlock
-                    const descriptorsImported = await WalletManager.importDescriptors(result.bitcoinData.descriptors);
-                    if (!descriptorsImported) {
-                        throw new Error('Failed to import descriptors');
-                    }
-                }
-
+            // Get encryption key from server
+            const clientHmac = await generateClientHmac(password);
+            const response = await fetch(`${BRIDGE_SERVER_URL}/wallet/blind-key`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ clientHmac })
+            });
+            
+            if (!response.ok) {
+                throw new Error('Server communication error');
+            }
+            
+            const { blindedKey } = await response.json();
+            const encryptionKey = await deriveClientEncryptionKey(password, blindedKey);
+            
+            // Retrieve and validate wallet data
+            const result = await retrieveWalletData(encryptionKey);
+            if (!result) {
                 update(state => ({
                     ...state,
-                    isLocked: false,
                     isLoading: false,
-                    walletData: result.walletKeys,
-                    bitcoinData: result.bitcoinData,
-                    error: null,
-                    failedAttempts: 0
+                    failedAttempts: state.failedAttempts + 1,
+                    error: `Invalid password. You can keep trying or restore your wallet using your recovery phrase.`
                 }));
-                
-                updateLastActivity();
-                startActivityTracking();
-                
-                return true;
-            } catch (error) {
-                console.log("unlockWallet error: ", error);
-                // Handle server communication errors specifically
-                const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-                console.log("unlockWallet errorMessage: ", errorMessage);
-                if (errorMessage === 'Server communication error' || errorMessage === 'Load failed') {
-                    console.log("unlockWallet update errorMessage: ", errorMessage);
-                    update(state => ({
-                        ...state,
-                        isLoading: false,
-                        error: 'Unable to connect to the server. Please check your connection and try again.',
-                        serverError: {
-                            message: 'Server connection failed',
-                            tips: [
-                                'Check your internet connection',
-                                'Make sure the server is running',
-                                'Try again in a few moments',
-                                'If the problem persists, contact support'
-                            ]
-                        }
-                    }));
-                } else {
-                    update(state => ({
-                        ...state,
-                        isLoading: false,
-                        error: errorMessage
-                    }));
-                }
                 return false;
             }
 
+            // Import descriptors and wait for scan to complete
+            const descriptorsImported = await WalletManager.importDescriptorsWithScanCheck(
+                result.bitcoinData.descriptors,
+                handleScanProgress
+            );
+
+            if (!descriptorsImported) {
+                throw new Error('Failed to import wallet descriptors');
+            }
+
+            // Update state with wallet data
+            update(state => ({
+                ...state,
+                isLocked: false,
+                isLoading: false,
+                walletData: result.walletKeys,
+                bitcoinData: result.bitcoinData,
+                error: null,
+                failedAttempts: 0,
+                isScanning: false,
+                scanProgress: undefined,
+                serverError: undefined,
+                encryptionKey
+            }));
+
+            // Start activity tracking
+            updateLastActivity();
+            startActivityTracking();
+            
+            return true;
+
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+            const tips = errorMessage.includes('Wallet is currently rescanning')
+                ? [
+                    'The wallet is currently being processed',
+                    'Please wait for the scanning to complete',
+                    'This may take a few minutes',
+                    'Try again once the scanning is finished'
+                  ]
+                : [
+                    'Check your internet connection',
+                    'Make sure the server is running',
+                    'Try again in a few moments',
+                    'If the problem persists, contact support'
+                  ];
+            
             update(state => ({
                 ...state,
                 isLoading: false,
-                error: errorMessage
+                error: errorMessage,
+                isScanning: false,
+                scanProgress: undefined,
+                serverError: {
+                    message: 'Wallet Operation Failed',
+                    tips
+                }
             }));
             return false;
         }

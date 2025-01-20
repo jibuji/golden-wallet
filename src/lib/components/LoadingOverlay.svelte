@@ -1,13 +1,17 @@
 <script lang="ts">
 	import { fade } from "svelte/transition";
 
-    export let message: string = 'Loading...';
+    export let message: string | undefined = undefined;
 </script>
 
 <div class="overlay" transition:fade>
     <div class="content">
         <div class="spinner"></div>
-        <div class="message">{message}</div>
+        {#if message}
+            <div class="message">{message}</div>
+        {:else}
+            <slot />
+        {/if}
     </div>
 </div>
 
